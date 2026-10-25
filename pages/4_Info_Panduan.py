@@ -1,5 +1,14 @@
 
 import streamlit as st
+import os
+
+def get_logo_path():
+    candidates=["assets/jata_negara_hd.png","assets/jata_negara.png","assets/jata_cropped.png","jata_negara_hd.png","./assets/jata_negara_hd.png"]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return None
+
 st.set_page_config(page_title="Info Sistem", layout="wide", initial_sidebar_state="expanded")
 
 # NOTA: File ini adalah sebahagian dari 1 PROJEK STREAMLIT
@@ -39,6 +48,15 @@ BASE: app_32.py LOCKED VERSION OK
 """
 
 import streamlit as st
+import os
+
+def get_logo_path():
+    candidates=["assets/jata_negara_hd.png","assets/jata_negara.png","assets/jata_cropped.png","jata_negara_hd.png","./assets/jata_negara_hd.png"]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return None
+
 import pandas as pd
 from supabase import create_client
 from io import BytesIO
@@ -58,6 +76,15 @@ st.set_page_config(page_title="Pelantikan SPM Selangor 2026", layout="wide", pag
 def hide_fork_github():
     try:
         import streamlit as st
+import os
+
+def get_logo_path():
+    candidates=["assets/jata_negara_hd.png","assets/jata_negara.png","assets/jata_cropped.png","jata_negara_hd.png","./assets/jata_negara_hd.png"]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return None
+
         st.markdown("""
         <style>
         /* Hide Fork button and GitHub cat */
@@ -1890,7 +1917,7 @@ def generate_surat_pdf_bytes_FIXED(nama, ic, jawatan, sek_asal, nama_sek_asal, p
 
         # ===== HEADER - IKUT GAMBAR =====
         logo_path = None
-        for cand in ["/mnt/data/jata_cropped.png", "/mnt/data/65b0dade-7a33-4312-b19b-9d5b24dd57ce.jpg", "jata_negara_hd.png","./jata_negara_hd.png","jata_negara.png","./jata_negara.png","/mnt/data/jata_negara_hd.png"]:
+        for cand in ["assets/jata_negara_hd.png", "assets/jata_negara.png", "assets/jata_negara_hd.png","assets/jata_negara_hd.png","assets/jata_negara.png","assets/jata_negara.png","assets/jata_negara_hd.png"]:
             if os.path.exists(cand):
                 logo_path = cand
                 break

@@ -1,13 +1,8 @@
 
-import streamlit as st
-import os
-st.set_page_config(page_title="JPN Sekolah", layout="wide")
-st.title("JPN - Negeri")
-logo = None
-for p in ["assets/jata_negara_hd.png","assets/jata_negara.png","../assets/jata_negara_hd.png"]:
-    if os.path.exists(p):
-        logo = p
-        break
-if logo:
-    st.sidebar.image(logo, width=100)
-st.info("Modul JPN - Pilih sekolah dan pusat")
+import streamlit as st, os
+st.set_page_config(page_title="SUP Sekolah", layout="wide")
+logo = "assets/jata_negara_hd.png" if os.path.exists("assets/jata_negara_hd.png") else None
+if logo: st.sidebar.image(logo, width=90)
+st.title("🏫 JPN - Negeri")
+st.info("Modul JPN akan diisi semula selepas landing 4 kad stabil. Buat masa ni landing dah betul.")
+st.write("Upload fail asal fix4_surat.py ke root jika perlu fungsi penuh, tapi jangan copy 8800 baris terus ke pages/ - itu punca SyntaxError.")

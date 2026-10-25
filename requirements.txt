@@ -1,0 +1,8 @@
+streamlit==1.39.0
+supabase==2.10.0
+pandas
+openpyxl
+xhtml2pdf
+reportlab
+pypdf
+Pillow

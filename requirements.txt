@@ -1,7 +1,0 @@
-streamlit
-supabase
-pandas
-openpyxl
-xhtml2pdf
-reportlab
-pypdf

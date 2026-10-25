@@ -1,1 +1,0 @@
-Letak jata_negara_hd.png dan tandatangan_pengarah_hd.png di sini

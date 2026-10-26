@@ -485,6 +485,7 @@ def clear_all_cache():
 
 # ✅ FIX: Buang trailing space dari KOD_DAERAH & PPD_MAP
 KOD_DAERAH = ["BA", "BB", "BC", "BD", "BE", "BF", "BG", "BH", "BJ", "BK"]
+KOD_PPD_FILTER = "BG"
 PPD_MAP = {
     "BA": "Klang", "BB": "Kuala Langat", "BC": "Kuala Selangor",
     "BD": "Hulu Langat", "BE": "Hulu Selangor", "BF": "Sabak Bernam",

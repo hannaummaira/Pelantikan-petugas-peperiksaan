@@ -1,5 +1,6 @@
-streamlit
+streamlit>=1.39
 supabase
 pandas
 openpyxl
 reportlab
+xhtml2pdf

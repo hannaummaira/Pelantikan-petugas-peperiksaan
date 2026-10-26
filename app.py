@@ -239,8 +239,8 @@ elif st.session_state.stage == "sup_dashboard":
         }
     
     st.sidebar.button("← Log Keluar", on_click=reset)
-    st.sidebar.markdown(f"**SUP {kod_sek}**
-{nama_sek}")
+    st.sidebar.markdown(f"**SUP {kod_sek}**")
+    st.sidebar.markdown(nama_sek)
     menu = st.sidebar.radio("MENU SUP", ["Dashboard","Senarai Guru","Tambah Guru","Import Excel","Buang Guru","Cadangan Lantikan","Hantar ke PPD","Petugas Hadir di Sekolah Saya","Surat Lantikan Saya"], key="sup_menu_full")
     
     st.markdown(f"### SUP {kod_sek} - {nama_sek} - {kod_ppd} - {PPD_MAP[kod_ppd]}")

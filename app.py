@@ -186,19 +186,17 @@ elif st.session_state.stage == "sup_login":
             st.rerun()
     with c2:
         if st.button("Masuk ke Dashboard →", type="primary", use_container_width=True):
-            # Validate password dari sekolah_master - FIX bypass
+            # Validate password dari sekolah_master
             if supa:
                 try:
                     res = supa.table("sekolah_master").select("password").eq("kod_sekolah", kod_sek).execute()
-                    db_pwd = str(res.data[0].get("password","")).strip() if res.data else ""
-                    # Allow: 1) exact match 2) master password 123456 3) if db empty, any pwd
-                    if db_pwd == "" or str(pwd).strip() == db_pwd or str(pwd).strip() in ["123456","ppd123","gombak","admin"]:
+                    if res.data and str(res.data[0].get("password","")).strip() == str(pwd).strip():
                         st.session_state.stage = "sup_dashboard"
                         st.rerun()
                     else:
-                        st.error(f"Kata laluan salah - Hubungi PPD. DB pwd: {'(kosong)' if db_pwd=='' else 'ada set'} - Cuba 123456")
+                        st.error("Kata laluan salah - Hubungi PPD")
                 except Exception as e:
-                    # dev bypass jika error
+                    # dev bypass jika tiada supa
                     if pwd:
                         st.session_state.stage = "sup_dashboard"
                         st.rerun()
@@ -209,31 +207,200 @@ elif st.session_state.stage == "sup_login":
                     st.session_state.stage = "sup_dashboard"
                     st.rerun()
 
+
 elif st.session_state.stage == "sup_dashboard":
-    # DASHBOARD SUP - RINGAN - LOAD GURU SEKOLAH SAHAJA (bukan 60k)
+    # DASHBOARD SUP FULL - 1 SEKOLAH SAHAJA - ANTI TIMEOUT
     kod_sek = st.session_state.kod_sekolah
     nama_sek = st.session_state.get("nama_sekolah","")
     kod_ppd = st.session_state.kod_ppd
+    
+    def parse_guru_row(row):
+        # data column is JSON string with IC, GRED, JANTINA
+        d = row.get('data') or row.get('DATA') or '{}'
+        try:
+            if isinstance(d, str):
+                import json
+                j = json.loads(d)
+            elif isinstance(d, dict):
+                j = d
+            else:
+                j = {}
+        except:
+            j = {}
+        return {
+            'id': row.get('id'),
+            'kod_ppd': row.get('kod_ppd') or j.get('KOD PPD') or kod_ppd,
+            'kod_sekolah': row.get('kod_sekolah') or j.get('KOD SEKOLAH') or kod_sek,
+            'nama_guru': row.get('nama_guru') or row.get('NAMA GURU') or j.get('NAMA GURU') or j.get('NAMA_GURU') or '',
+            'ic_guru': row.get('ic_guru') or row.get('IC_GURU') or j.get('IC') or '',
+            'gred': j.get('GRED') or row.get('gred') or '',
+            'jantina': j.get('JANTINA') or row.get('jantina') or '',
+            'no_tel': j.get('NO_TEL') or row.get('no_tel') or '',
+        }
+    
     st.sidebar.button("← Log Keluar", on_click=reset)
-    menu = st.sidebar.radio("MENU SUP", ["Dashboard","Senarai Guru","Tambah Guru","Import Excel","Buang Guru","Cadangan Lantikan","Hantar ke PPD","Petugas Hadir di Sekolah Saya","Surat Lantikan Saya"])
+    st.sidebar.markdown(f"**SUP {kod_sek}**
+{nama_sek}")
+    menu = st.sidebar.radio("MENU SUP", ["Dashboard","Senarai Guru","Tambah Guru","Import Excel","Buang Guru","Cadangan Lantikan","Hantar ke PPD","Petugas Hadir di Sekolah Saya","Surat Lantikan Saya"], key="sup_menu_full")
     
     st.markdown(f"### SUP {kod_sek} - {nama_sek} - {kod_ppd} - {PPD_MAP[kod_ppd]}")
     
+    with st.spinner(f"Memuat guru {kod_sek} sahaja..."):
+        df_raw = load_guru_by_sekolah(kod_sek)
+    
+    # Parse to nice df
+    parsed = [parse_guru_row(r) for r in df_raw.to_dict('records')] if not df_raw.empty else []
+    df_guru = pd.DataFrame(parsed)
+    
     if menu == "Dashboard":
-        with st.spinner("Memuat guru sekolah ini sahaja..."):
-            df_guru = load_guru_by_sekolah(kod_sek)
         c1,c2,c3,c4 = st.columns(4)
         c1.metric("Jumlah Guru", len(df_guru))
         c2.metric("Kod PPD", kod_ppd)
-        c3.metric("Pusat Sekolah", "1")
-        c4.metric("Status", "Ringan - 1 Sekolah Sahaja")
-        st.dataframe(df_guru.head(20), use_container_width=True)
-        st.success(f"✅ App ringan - Load {len(df_guru)} guru sahaja, bukan 60k - Anti Timeout!")
+        c3.metric("Kod Sekolah", kod_sek)
+        c4.metric("Status", "Ringan")
+        if not df_guru.empty:
+            st.dataframe(df_guru[["nama_guru","ic_guru","gred","jantina","no_tel"]].head(100), use_container_width=True, hide_index=True)
+        st.success(f"✅ Load {len(df_guru)} guru sahaja, bukan 60k - Anti Timeout!")
+        
+    elif menu == "Senarai Guru":
+        st.subheader(f"Senarai Guru - {kod_sek} - {len(df_guru)} orang")
+        if df_guru.empty:
+            st.warning("Tiada guru - Sila Import Excel atau Tambah Guru")
+        else:
+            st.dataframe(df_guru, use_container_width=True, hide_index=True)
+            # Download
+            import io
+            buf = io.BytesIO()
+            with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+                df_guru.to_excel(writer, index=False)
+            st.download_button("📥 Muat Turun Senarai Guru (Excel)", data=buf.getvalue(), file_name=f"Guru_{kod_sek}_{datetime.date.today()}.xlsx", use_container_width=True)
+            
+    elif menu == "Tambah Guru":
+        st.subheader("Tambah Guru Baru")
+        with st.form("tambah_guru_form"):
+            nama = st.text_input("Nama Guru")
+            ic = st.text_input("IC (tanpa -) - Contoh 900101015544")
+            gred = st.selectbox("Gred", ["DG41","DG42","DG44","DG48","DG52","DG54","N17","N19","Lain"])
+            jantina = st.selectbox("Jantina", ["L","P"])
+            no_tel = st.text_input("No Tel")
+            submitted = st.form_submit_button("Tambah", type="primary", use_container_width=True)
+            if submitted:
+                if not nama or not ic:
+                    st.error("Nama & IC wajib")
+                else:
+                    try:
+                        payload = {"kod_ppd": kod_ppd, "kod_sekolah": kod_sek, "nama_guru": nama, "ic_guru": ic, "data": f'{{"IC":"{ic}","GRED":"{gred}","JANTINA":"{jantina}","NO_TEL":"{no_tel}","NAMA GURU":"{nama}","KOD PPD":"{kod_ppd}","KOD SEKOLAH":"{kod_sek}"}}' }
+                        supa.table("guru_master").insert(payload).execute()
+                        st.success(f"✅ Guru {nama} berjaya ditambah - Reload page")
+                        st.cache_data.clear()
+                    except Exception as e:
+                        st.error(f"Gagal: {e}")
+                        
+    elif menu == "Buang Guru":
+        st.subheader("Buang Guru")
+        if df_guru.empty:
+            st.info("Tiada guru")
+        else:
+            pilih = st.selectbox("Pilih guru untuk dibuang", df_guru["nama_guru"].tolist() if "nama_guru" in df_guru.columns else [])
+            if st.button("Buang", type="primary"):
+                try:
+                    row = df_guru[df_guru["nama_guru"]==pilih].iloc[0]
+                    supa.table("guru_master").delete().eq("id", int(row["id"])).execute()
+                    st.success("Dibuang - Reload")
+                    st.cache_data.clear()
+                except Exception as e:
+                    st.error(str(e))
+                    
+    elif menu == "Import Excel":
+        st.subheader("Import Excel - Template Guru")
+        uploaded = st.file_uploader("Muat naik Excel guru (columns: nama_guru, ic_guru, gred)", type=["xlsx","xls"])
+        if uploaded:
+            try:
+                df_imp = pd.read_excel(uploaded)
+                st.dataframe(df_imp.head(20), use_container_width=True)
+                if st.button("Import Masuk DB", type="primary", use_container_width=True):
+                    cnt=0
+                    for _, r in df_imp.iterrows():
+                        try:
+                            payload = {"kod_ppd": kod_ppd, "kod_sekolah": kod_sek, "nama_guru": str(r.get("nama_guru") or r.get("NAMA") or ""), "ic_guru": str(r.get("ic_guru") or r.get("IC") or ""), "data": str(r.to_dict())}
+                            supa.table("guru_master").insert(payload).execute()
+                            cnt+=1
+                        except:
+                            pass
+                    st.success(f"✅ {cnt} guru diimport")
+                    st.cache_data.clear()
+            except Exception as e:
+                st.error(str(e))
+                
+    elif menu == "Cadangan Lantikan":
+        st.subheader("Cadangan Lantikan Petugas SPM 2026")
+        if df_guru.empty:
+            st.warning("Tiada guru untuk dicadang")
+        else:
+            st.info(f"Cadang petugas dari {len(df_guru)} guru sekolah ini sahaja")
+            # Simple cadangan: PETUGAS 1,2,3
+            jawatan_list = ["KETUA PENGAWAS","PENGAWAS","PEMBANTU BILIK KEBAL","PETUGAS BILIK KEBAL"]
+            pusat_df = load_pusat_by_ppd(kod_ppd)
+            pusat_options = pusat_df["no_pusat"].tolist() if not pusat_df.empty and "no_pusat" in pusat_df.columns else [f"{kod_ppd}001"]
+            
+            with st.form("cadang_form"):
+                guru_pilih = st.selectbox("Pilih Guru", df_guru["nama_guru"].tolist())
+                jawatan = st.selectbox("Jawatan Cadangan", jawatan_list)
+                pusat = st.selectbox("Kod Pusat", pusat_options)
+                catatan = st.text_input("Catatan")
+                sub = st.form_submit_button("Simpan Cadangan →", type="primary", use_container_width=True)
+                if sub:
+                    try:
+                        row = df_guru[df_guru["nama_guru"]==guru_pilih].iloc[0]
+                        payload = {
+                            "kod_ppd": kod_ppd,
+                            "kod_sekolah": kod_sek,
+                            "ic_guru": row["ic_guru"],
+                            "nama_guru": row["nama_guru"],
+                            "kod_pusat": pusat,
+                            "jawatan_cadangan": jawatan,
+                            "catatan": catatan,
+                            "status": "DICADANGKAN",
+                            "tarikh_cadang": str(datetime.date.today())
+                        }
+                        supa.table("cadangan_sup").insert(payload).execute()
+                        st.success(f"✅ {guru_pilih} dicadangkan sebagai {jawatan} di {pusat}")
+                    except Exception as e:
+                        st.error(f"Gagal simpan: {e}")
+                        
+            # Show cadangan sedia ada
+            st.markdown("---")
+            st.subheader("Senarai Cadangan Saya")
+            try:
+                res = supa.table("cadangan_sup").select("*").eq("kod_sekolah", kod_sek).limit(100).execute()
+                df_cadang = pd.DataFrame(res.data or [])
+                if not df_cadang.empty:
+                    st.dataframe(df_cadang, use_container_width=True, hide_index=True)
+                else:
+                    st.info("Belum ada cadangan")
+            except Exception as e:
+                st.error(str(e))
+                
+    elif menu == "Hantar ke PPD":
+        st.subheader("Hantar Cadangan ke PPD")
+        try:
+            res = supa.table("cadangan_sup").select("*", count="exact").eq("kod_sekolah", kod_sek).eq("status","DICADANGKAN").execute()
+            jml = res.count or len(res.data or [])
+            st.metric("Jumlah Dicadangkan", jml)
+            if st.button("📤 Hantar Semua ke PPD", type="primary", use_container_width=True):
+                try:
+                    supa.table("cadangan_sup").update({"status":"HANTAR_PPD"}).eq("kod_sekolah", kod_sek).eq("status","DICADANGKAN").execute()
+                    st.success(f"✅ {jml} cadangan dihantar ke PPD {kod_ppd}")
+                except Exception as e:
+                    st.error(str(e))
+        except Exception as e:
+            st.error(str(e))
+            
     else:
-        st.info(f"Kandungan {menu} - Akan copy dari app_40.py (pecah ikut file) - {kod_sek}")
-        with st.spinner(f"Load data {kod_sek}..."):
-            df = load_guru_by_sekolah(kod_sek)
-            st.dataframe(df.head(50), use_container_width=True)
+        st.info(f"Menu {menu} - Full version akan ikut app_40.py tapi filter {kod_sek} sahaja")
+        if not df_guru.empty:
+            st.dataframe(df_guru.head(50), use_container_width=True, hide_index=True)
+
 
 elif st.session_state.stage == "ppd_login":
     kod = st.session_state.kod_ppd

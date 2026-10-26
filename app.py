@@ -232,16 +232,18 @@ elif st.session_state.stage == "sup_dashboard":
             'no_tel': j.get('NO_TEL') or row.get('no_tel') or '',
         }
     
-    # Sidebar + Main Menu - visible
-    with st.sidebar:
-        st.button("← Log Keluar", on_click=reset, key="logout_sup")
-        st.markdown(f"**SUP {kod_sek}**")
-        st.caption(nama_sek)
+
     
     st.markdown(f"### SUP {kod_sek} - {nama_sek} - {kod_ppd} - {PPD_MAP[kod_ppd]}")
     
-    # MENU VISIBLE DI MAIN - tak hilang
-    menu = st.selectbox("📋 PILIH MENU SUP", ["Dashboard","Senarai Guru","Tambah Guru","Import Excel","Buang Guru","Cadangan Lantikan","Hantar ke PPD","Petugas Hadir di Sekolah Saya","Surat Lantikan Saya"], key="sup_menu_visible", index=0)
+    # MENU DALAM SIDEBAR TETAP - BENTUK SIDEBAR KEKAL
+    with st.sidebar:
+        st.markdown(f"### 🏫 {kod_sek}")
+        st.caption(nama_sek)
+        st.markdown("---")
+        menu = st.radio("MENU SUP", ["Dashboard","Senarai Guru","Tambah Guru","Import Excel","Buang Guru","Cadangan Lantikan","Hantar ke PPD","Petugas Hadir di Sekolah Saya","Surat Lantikan Saya"], key="sup_menu_fixed", index=0)
+        st.markdown("---")
+        st.button("← Log Keluar", on_click=reset, key="logout_sup_fixed", use_container_width=True)
     
     with st.spinner(f"Memuat guru {kod_sek} sahaja..."):
         df_raw = load_guru_by_sekolah(kod_sek)
@@ -388,8 +390,10 @@ elif st.session_state.stage == "ppd_login":
 elif st.session_state.stage == "ppd_dashboard":
     kod = st.session_state.kod_ppd
     with st.sidebar:
-        st.button("← Log Keluar", on_click=reset, key="logout_ppd")
-    menu = st.selectbox("📋 MENU PPD - Pilih Fungsi", ["Dashboard PPD","Sekolah dalam PPD","Pusat di PPD","Cadangan SUP","Jana Keseluruhan","Hasil Janaan","Penempatan Manual","Selenggara Bilik Kebal","Semakan Lantikan","Kelulusan","Janaan Surat Lantikan","Export"])
+        st.markdown(f"### 🏫 PPD {kod} - {PPD_MAP[kod]}")
+        st.button("← Log Keluar", on_click=reset, key="logout_ppd_fixed", use_container_width=True)
+        st.markdown("---")
+        menu = st.radio("MENU PPD", ["Dashboard PPD","Sekolah dalam PPD","Pusat di PPD","Cadangan SUP","Jana Keseluruhan","Hasil Janaan","Penempatan Manual","Selenggara Bilik Kebal","Semakan Lantikan","Kelulusan","Janaan Surat Lantikan","Export"])
     sub = ""
     if menu == "Pusat di PPD":
         sub = st.sidebar.radio("SUB MENU", ["Senarai Pusat","Poskod Pusat"])

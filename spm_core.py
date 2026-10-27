@@ -1488,7 +1488,7 @@ def get_cadangan_df(kod_ppd=None, kod_sekolah=None):
                     return 5
                 if any(x in s for x in ('DILANTIK', 'DIJANA', 'DITEMPATKAN', 'SURAT')):
                     return 4
-                if 'HANTAR' in s:
+                if 'HANTAR' in s or 'TERPILIH' in s or 'SIMPANAN' in s:
                     return 3
                 return 1
             try:
@@ -2392,6 +2392,7 @@ FLY_SUP = {
 FLY_PPD = {
     'dashboard':  [('ringkasan', '📊 Ringkasan'), ('status', '📍 Status Pusat'), ('berwarna', '🎨 Paparan Warna'), ('sekolah', '🏫 Sekolah & Export')],
     'pusat':      [('senarai', '📋 Senarai Pusat'), ('poskod', '📮 Poskod Pusat')],
+    'cadangan':   [('sekolah', '🏫 Ikut Sekolah'), ('nama', '📝 Senarai Nama Cadangan'), ('simpanan', '📦 Senarai Simpanan')],
     'jana':       [('auto', '🌍 Jana Auto Poskod'), ('jawatan', '👑 Ikut Jawatan')],
     'hasil':      [('ringkasan', '📋 Ringkasan Pusat'), ('sekolah', '🏫 Ikut Sekolah Asal'), ('guru', '👥 Semua Guru')],
     'semakan':    [('semak', '🔍 Semakan Lantikan'), ('kosong', '➕ Isi Kekosongan')],

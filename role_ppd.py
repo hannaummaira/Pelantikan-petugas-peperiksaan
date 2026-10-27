@@ -4,6 +4,7 @@ import spm_core as _core
 import ui_theme as _ui
 globals().update({k: v for k, v in vars(_core).items() if not k.startswith("__")})
 globals().update({k: v for k, v in vars(_ui).items() if not k.startswith("__")})
+from ppd_cadangan import render_senarai_nama, render_senarai_simpanan, jana_pool_panel
 
 def render_ppd():
     kod_ppd = st.session_state.kod
@@ -480,12 +481,13 @@ def render_ppd():
 
             df_pusat_raw = get_pusat_df()
             df_cad_all = get_cadangan_df(kod_ppd=kod_ppd)
+            df_cad_all = jana_pool_panel(kod_ppd, df_cad_all)   # hanya calon TERPILIH PPD (+ yang sudah diproses)
 
             if df_pusat_raw.empty:
                 st.warning("⚠️ Tiada pusat_master")
                 st.stop()
             if df_cad_all.empty:
-                st.warning(f"⚠️ Belum ada cadangan SUP untuk PPD {kod_ppd}")
+                st.warning("⚠️ Belum ada calon untuk dijana. Lihat arahan di atas.")
                 st.stop()
 
             # Parse pusat with poskod
@@ -1729,6 +1731,12 @@ def render_ppd():
                         st.info(f"Belum ada penempatan di {pilih_pusat_manual} - ini paparan pusat semasa sahaja, ringkasan kumulatif di atas kekal")
             else:
                 st.info(f"Belum ada penempatan manual di PPD {kod_ppd} - Sila lantik KP, TKP, Pengawas di atas. Ringkasan kumulatif akan muncul di sini dan tidak hilang bila pilih sekolah kedua.")
+
+        elif menu == "cadangan" and fly_cur == "nama":
+            render_senarai_nama(kod_ppd)
+
+        elif menu == "cadangan" and fly_cur == "simpanan":
+            render_senarai_simpanan(kod_ppd)
 
         elif menu == "cadangan":
             st.markdown(f'''

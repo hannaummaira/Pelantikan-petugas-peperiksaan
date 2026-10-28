@@ -5,13 +5,14 @@ import ui_theme as _ui
 globals().update({k: v for k, v in vars(_core).items() if not k.startswith("__")})
 globals().update({k: v for k, v in vars(_ui).items() if not k.startswith("__")})
 from ppd_cadangan import render_senarai_nama, render_senarai_simpanan, jana_pool_panel, hasil_lookup, hasil_row
+from ppd_zon import render_penempatan_zon
 
 def render_ppd():
     kod_ppd = st.session_state.kod
     if SCOPE["ppd"] and kod_ppd != SCOPE["ppd"]:
         st.session_state.clear(); st.rerun()
     MENU_PPD = [('dashboard', '📊 Dashboard PPD'), ('sekolah', '🏫 Sekolah dalam PPD'), ('pusat', '🏫 Pusat di PPD'),
-                    ('cadangan', '📋 Cadangan SUP'), ('jana', '🚀 Jana Keseluruhan'), ('hasil', '📋 Hasil Janaan'), ('manual', '📌 Penempatan Manual'), ('selenggara', '🔐 Selenggara Bilik Kebal'), ('semakan', '🔍 Semakan Lantikan'), ('kelulusan', '✅ Kelulusan'), ('jana_surat', '📄 Janaan Surat Lantikan'),
+                    ('cadangan', '📋 Cadangan SUP'), ('jana', '🚀 Jana Keseluruhan'), ('hasil', '📋 Hasil Janaan'), ('manual', '📌 Penempatan Manual'), ('zon', '🗺️ Penempatan Zon'), ('selenggara', '🔐 Selenggara Bilik Kebal'), ('semakan', '🔍 Semakan Lantikan'), ('kelulusan', '✅ Kelulusan'), ('jana_surat', '📄 Janaan Surat Lantikan'),
                     ('export', '📥 Export'), ('keluar', '🚪 Log Keluar')]
     shell_header_ppd(kod_ppd)
     menu, fly_cur, col_main = shell_layout("ppd_menu_sel", MENU_PPD, FLY_PPD, None, "fly_ppd")
@@ -1733,6 +1734,9 @@ def render_ppd():
                         st.info(f"Belum ada penempatan di {pilih_pusat_manual} - ini paparan pusat semasa sahaja, ringkasan kumulatif di atas kekal")
             else:
                 st.info(f"Belum ada penempatan manual di PPD {kod_ppd} - Sila lantik KP, TKP, Pengawas di atas. Ringkasan kumulatif akan muncul di sini dan tidak hilang bila pilih sekolah kedua.")
+
+        elif menu == "zon":
+            render_penempatan_zon(kod_ppd, fly_cur)
 
         elif menu == "cadangan" and fly_cur == "nama":
             render_senarai_nama(kod_ppd)

@@ -82,13 +82,13 @@ THEME_CSS = """
 .st-key-shellmenu [class*="st-key-flymenu_"] button[kind="primary"],
 .st-key-shellmenu [class*="st-key-flymenu_"] [data-testid="stBaseButton-primary"] {border-left:3px solid #ffca28!important;box-shadow:0 2px 8px rgba(13,71,161,.3)!important;background:#0d47a1!important}
 .st-key-shellsub {background:#fff;border:1px solid #c5d6e8;border-top:0;border-radius:0 0 4px 4px}
-.st-key-shellsub [class*="st-key-flysub_"] button {width:100%;justify-content:flex-start!important;text-align:left!important;background:#fff!important;border:none!important;border-radius:0!important;border-bottom:1px solid #e3eaf3!important;padding:9px 12px!important;min-height:0!important;box-shadow:none!important;transform:none!important}
-.st-key-shellsub [class*="st-key-flysub_"] button * {color:#334155!important;font-size:12px!important;font-weight:500!important;text-align:left!important}
-.st-key-shellsub [class*="st-key-flysub_"] button:hover {background:#f1f5f9!important}
+.st-key-shellsub [class*="st-key-flysub_"] button {width:100%;justify-content:flex-start!important;text-align:left!important;background:#1565c0!important;border:none!important;border-radius:0!important;border-bottom:1px solid #0d47a1!important;border-left:3px solid transparent!important;padding:9px 12px!important;min-height:0!important;box-shadow:none!important;transform:none!important}
+.st-key-shellsub [class*="st-key-flysub_"] button * {color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;font-size:12px!important;font-weight:600!important;text-align:left!important}
+.st-key-shellsub [class*="st-key-flysub_"] button:hover {background:#0d47a1!important}
 .st-key-shellsub [class*="st-key-flysub_"] button[kind="primary"],
-.st-key-shellsub [class*="st-key-flysub_"] [data-testid="stBaseButton-primary"] {background:#e3f2fd!important;box-shadow:none!important}
+.st-key-shellsub [class*="st-key-flysub_"] [data-testid="stBaseButton-primary"] {background:#0a2a66!important;border-left:3px solid #ffca28!important;box-shadow:none!important}
 .st-key-shellsub [class*="st-key-flysub_"] button[kind="primary"] *,
-.st-key-shellsub [class*="st-key-flysub_"] [data-testid="stBaseButton-primary"] * {color:#0d47a1!important;font-weight:700!important}
+.st-key-shellsub [class*="st-key-flysub_"] [data-testid="stBaseButton-primary"] * {color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;font-weight:800!important}
 .st-key-suprefresh .stButton>button {width:100%;background:#0d47a1!important;border:none!important;border-radius:4px!important;box-shadow:0 2px 0 #082c62!important;padding:10px 0!important;min-height:0!important}
 .st-key-suprefresh .stButton>button * {color:#fff!important;font-size:12px!important;font-weight:800!important;letter-spacing:.03em}
 
@@ -146,9 +146,56 @@ h1,h2,h3,h4,h5,h6 {color:#0a2a66!important;font-weight:800!important}
 input, textarea, [data-baseweb="select"] > div, [data-baseweb="input"] {color:#0b1b33!important;background:#ffffff!important;border-color:#475569!important}
 [data-baseweb="select"] *, [data-baseweb="input"] * {color:#0b1b33!important}
 input::placeholder, textarea::placeholder {color:#475569!important;opacity:1!important}
-.stButton>button[kind="secondary"], [data-testid="stBaseButton-secondary"] {background:#ffffff!important;border:2px solid #0d47a1!important;color:#0a2a66!important;font-weight:700!important}
-.stButton>button[kind="secondary"] *, [data-testid="stBaseButton-secondary"] * {color:#0a2a66!important}
-.stButton>button:disabled {opacity:.55!important}
+/* ---- BUTANG: latar biru pekat + tulisan PUTIH (menimpa warna teks markdown di dalam butang) ---- */
+.stButton > button,
+.stDownloadButton > button,
+[data-testid="stFormSubmitButton"] > button,
+button[data-testid="stBaseButton-primary"],
+button[data-testid="stBaseButton-secondary"],
+button[data-testid="stBaseButton-primaryFormSubmit"],
+button[data-testid="stBaseButton-secondaryFormSubmit"] {background:#0d47a1!important;background-image:none!important;border:2px solid #0a367e!important;color:#ffffff!important;font-weight:700!important}
+.stButton > button *,
+.stButton > button p,
+.stButton > button span,
+.stButton > button div,
+.stDownloadButton > button *,
+.stDownloadButton > button p,
+.stDownloadButton > button span,
+.stDownloadButton > button div,
+[data-testid="stFormSubmitButton"] > button *,
+[data-testid="stFormSubmitButton"] > button p,
+[data-testid="stFormSubmitButton"] > button span,
+[data-testid="stFormSubmitButton"] > button div,
+button[data-testid="stBaseButton-primary"] *,
+button[data-testid="stBaseButton-primary"] p,
+button[data-testid="stBaseButton-primary"] span,
+button[data-testid="stBaseButton-primary"] div,
+button[data-testid="stBaseButton-secondary"] *,
+button[data-testid="stBaseButton-secondary"] p,
+button[data-testid="stBaseButton-secondary"] span,
+button[data-testid="stBaseButton-secondary"] div,
+button[data-testid="stBaseButton-primaryFormSubmit"] *,
+button[data-testid="stBaseButton-primaryFormSubmit"] p,
+button[data-testid="stBaseButton-primaryFormSubmit"] span,
+button[data-testid="stBaseButton-primaryFormSubmit"] div,
+button[data-testid="stBaseButton-secondaryFormSubmit"] *,
+button[data-testid="stBaseButton-secondaryFormSubmit"] p,
+button[data-testid="stBaseButton-secondaryFormSubmit"] span,
+button[data-testid="stBaseButton-secondaryFormSubmit"] div {color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;fill:#ffffff!important}
+.stButton > button:hover,
+.stDownloadButton > button:hover,
+[data-testid="stFormSubmitButton"] > button:hover,
+button[data-testid="stBaseButton-primary"]:hover,
+button[data-testid="stBaseButton-secondary"]:hover,
+button[data-testid="stBaseButton-primaryFormSubmit"]:hover,
+button[data-testid="stBaseButton-secondaryFormSubmit"]:hover {background:#0a367e!important;border-color:#082a66!important}
+.stButton > button[kind="primary"],
+button[data-testid="stBaseButton-primary"],
+button[data-testid="stBaseButton-primaryFormSubmit"] {background:#0a2a66!important;border-color:#082050!important}
+.stButton > button:disabled,
+.stDownloadButton > button:disabled,
+button[data-testid="stBaseButton-secondary"]:disabled,
+button[data-testid="stBaseButton-primary"]:disabled {background:#64748b!important;border-color:#475569!important;opacity:1!important}
 
 /* ---- jadual: bingkai tebal & bayang supaya jelas dari latar ---- */
 [data-testid="stDataFrame"], [data-testid="stDataEditor"] {border:2px solid #475569!important;border-radius:6px!important;box-shadow:0 2px 6px rgba(15,23,42,.18)!important;background:#ffffff!important}
@@ -175,7 +222,7 @@ input::placeholder, textarea::placeholder {color:#475569!important;opacity:1!imp
 .sup-tile .n {color:#0a2a66!important}
 .sup-box {border:1.5px solid #90a4c4!important}
 .st-key-shellmenu [class*="st-key-flymenu_"] button * {font-size:13px!important}
-.st-key-shellsub [class*="st-key-flysub_"] button * {font-size:13px!important;color:#0b1b33!important}
+.st-key-shellsub [class*="st-key-flysub_"] button * {font-size:13px!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important}
 .cn-card {border:1.5px solid #90a4c4!important}
 .cn-card .l {font-size:11px!important;color:#1e293b!important}
 .cn-card .s {font-size:12px!important;color:#1e293b!important}

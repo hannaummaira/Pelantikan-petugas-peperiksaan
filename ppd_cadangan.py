@@ -14,6 +14,7 @@ import pandas as pd
 import streamlit as st
 import spm_core as core
 from spm_core import get_cadangan_df, supa
+from ui_theme import esc
 
 ST_TERPILIH = "TERPILIH PPD"
 ST_SIMPANAN = "SIMPANAN PPD"
@@ -132,15 +133,6 @@ def _container(height=None):
         return st.container()
 
 
-def _frag_rerun():
-    """Navigasi dalam popup tanpa menutupnya (Streamlit >= 1.37); versi lama: buka semula sekali."""
-    try:
-        st.rerun(scope="fragment")
-    except TypeError:
-        st.session_state["nama_reopen"] = True
-        st.rerun()
-
-
 def _counts_strip(df):
     c = df["STAGE"].value_counts().to_dict() if not df.empty else {}
     a, b, c2, d = st.columns(4)
@@ -150,132 +142,257 @@ def _counts_strip(df):
     d.metric("📌 Sudah diproses", c.get("LOCKED", 0))
 
 
-# ------------------------------------------------------------------ SENARAI NAMA CADANGAN (popup 3 langkah)
-try:
-    _dlg = st.dialog("📝 Senarai Nama Cadangan", width="large")
-except TypeError:
-    _dlg = st.dialog("📝 Senarai Nama Cadangan")
+# ------------------------------------------------------------------ SENARAI NAMA CADANGAN (replika: pilih sekolah -> tick -> hantar)
+PER_PAGE = 10
+
+CN_CSS = """<style>
+.cn-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0}
+.cn-card{background:#fff;border:1px solid #c5d6e8;border-radius:8px;padding:10px 12px}
+.cn-card .l{font-size:10px;font-weight:700;letter-spacing:.1em;color:#5f6f85}
+.cn-card .v{font-size:15px;font-weight:800;color:#0d47a1;margin-top:2px;line-height:1.2}
+.cn-card .s{font-size:10px;color:#5f6f85;margin-top:3px}
+.cn-legend{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:11px;color:#5f6f85;margin:6px 0}
+.cn-head{background:#e3f2fd;border:1px solid #c5d6e8;border-radius:6px 6px 0 0;padding:7px 4px;font-size:10px;font-weight:700;letter-spacing:.08em;color:#0d47a1}
+.cn-b{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:700;border:1px solid}
+.cn-b.ok{background:#dcfce7;border-color:#86efac;color:#166534}
+.cn-b.sim{background:#fef3c7;border-color:#fde68a;color:#92400e}
+.cn-b.jw{background:#e3f2fd;border-color:#90caf9;color:#0d47a1;border-radius:4px}
+.cn-b i{width:6px;height:6px;border-radius:50%;display:inline-block;background:currentColor}
+.cn-nm{font-weight:700;color:#13233f;font-size:13px}
+.cn-ic{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#475569}
+.cn-sm{font-size:11px;color:#334155}
+.cn-bar{background:#fff;border:1px solid #c5d6e8;border-radius:8px;padding:10px 14px;margin:10px 0 6px;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+.cn-bar .k{font-size:10px;font-weight:700;letter-spacing:.08em;color:#5f6f85}
+.cn-bar .n{font-size:20px;font-weight:800;margin-left:6px}
+.cn-bar .ok{color:#166534}.cn-bar .sim{color:#92400e}
+.cn-guide{background:#f0f7ff;border:1px solid #bbdefb;border-radius:8px;padding:8px 12px;font-size:11px;color:#334155;margin-top:8px}
+@media(max-width:900px){.cn-cards{grid-template-columns:repeat(2,1fr)}}
+</style>"""
+
+JAW_ALL = "Semua"
 
 
-@_dlg
-def dlg_nama(kod_ppd):
-    df = normalize(get_cadangan_df(kod_ppd=kod_ppd))
-    if df.empty:
-        st.warning("Tiada cadangan.")
-        return
-    step = st.session_state.get("nama_step", "jawatan")
-    if step == "sekolah" and st.session_state.get("nama_jawatan"):
-        _step_sekolah(df, kod_ppd)
-    elif step == "nama" and st.session_state.get("nama_jawatan") and st.session_state.get("nama_kod_sek"):
-        _step_nama(df, kod_ppd)
+def _cols(spec):
+    try:
+        return st.columns(spec, vertical_alignment="center")
+    except TypeError:
+        return st.columns(spec)
+
+
+def _sel_state():
+    return st.session_state.setdefault("cn_sel", {})
+
+
+def _ck_key(school, rid):
+    return f"cn_ck_{school}_{rid}"
+
+
+def _toggle(school, rid):
+    sel = _sel_state().setdefault(school, set())
+    if st.session_state.get(_ck_key(school, rid)):
+        sel.add(rid)
     else:
-        _step_jawatan(df)
+        sel.discard(rid)
 
 
-def _step_jawatan(df):
-    st.markdown("**Langkah 1 / 3 - Pilih Jawatan**")
-    cnt = df.groupby("JAWATAN").size().to_dict()
-    cols = st.columns(2)
-    for i, j in enumerate(_jaw_sorted(cnt)):
-        with cols[i % 2]:
-            if st.button(f"{j}  ({cnt[j]} nama)", key=f"nj_{i}", use_container_width=True):
-                st.session_state.update({"nama_step": "sekolah", "nama_jawatan": j, "nama_kod_sek": None})
-                _frag_rerun()
-
-
-def _step_sekolah(df, kod_ppd):
-    j = st.session_state["nama_jawatan"]
-    st.markdown(f"**Langkah 2 / 3 - Pilihan Sekolah** &nbsp;·&nbsp; Jawatan: **{j}**")
-    if st.button("← Tukar Jawatan", key="nb_jaw"):
-        st.session_state.update({"nama_step": "jawatan"})
-        _frag_rerun()
-    sub = df[df["JAWATAN"] == j]
-    smap = sekolah_map(kod_ppd)
-    q = st.text_input("Cari sekolah", key="nj_q", placeholder="Kod atau nama sekolah").upper().strip()
-    items = []
-    for kod, g in sub.groupby("KOD_SEK"):
-        nama = _nama_sek(kod, g["NAMA_SEK"].iloc[0], smap)
-        if q and q not in kod and q not in nama.upper():
-            continue
-        s = g["STAGE"].value_counts().to_dict()
-        items.append((nama, kod, len(g), s.get("TERPILIH", 0), s.get("SIMPANAN", 0), s.get("BARU", 0)))
-    items.sort()
-    st.caption(f"{len(items)} sekolah  •  ✅ terpilih  📦 simpanan  🆕 belum disemak")
-    with _container(380):
-        for nama, kod, n, t, s, b in items:
-            if st.button(f"{nama} ({kod}) — {n} nama   [✅{t}  📦{s}  🆕{b}]", key=f"ns_{kod}", use_container_width=True):
-                st.session_state.update({"nama_step": "nama", "nama_kod_sek": kod, "nama_selall": None})
-                _frag_rerun()
-
-
-def _step_nama(df, kod_ppd):
-    j, kod = st.session_state["nama_jawatan"], st.session_state["nama_kod_sek"]
-    smap = sekolah_map(kod_ppd)
-    sub = df[(df["JAWATAN"] == j) & (df["KOD_SEK"] == kod)]
-    nama_sek = _nama_sek(kod, sub["NAMA_SEK"].iloc[0] if not sub.empty else "", smap)
-    st.markdown(f"**Langkah 3 / 3 - Senarai Nama** &nbsp;·&nbsp; {j} &nbsp;·&nbsp; **{nama_sek} ({kod})**")
-    if st.button("← Kembali ke Pilihan Sekolah", key="nb_sek"):
-        st.session_state.update({"nama_step": "sekolah"})
-        _frag_rerun()
-    locked = sub[sub["STAGE"] == "LOCKED"]
-    edit = sub[sub["STAGE"] != "LOCKED"].reset_index(drop=True)
-    if not locked.empty:
-        st.caption(f"ℹ️ {len(locked)} nama sudah diproses (dilantik/ditempatkan) - tidak dipaparkan.")
-    if edit.empty:
-        st.info("Tiada nama untuk disemak.")
-        return
-    sel_all = st.session_state.get("nama_selall")
-    c1, c2, _ = st.columns([1, 1, 2])
-    if c1.button("✅ Tanda Semua", key="nm_all"):
-        st.session_state["nama_selall"] = True
-        _frag_rerun()
-    if c2.button("⬜ Kosongkan", key="nm_none"):
-        st.session_state["nama_selall"] = False
-        _frag_rerun()
-    default = (edit["STAGE"] != "SIMPANAN") if sel_all is None else bool(sel_all)
-    view = edit[["id", "NAMA", "IC", "POSKOD", "STATUS"]].copy()
-    view.insert(0, "JANA", default)
-    edited = st.data_editor(
-        view, hide_index=True, use_container_width=True, key=f"ed_{kod}_{j}_{sel_all}",
-        disabled=["id", "NAMA", "IC", "POSKOD", "STATUS"],
-        column_config={"JANA": st.column_config.CheckboxColumn("Jana", help="Tick = dijana. Tidak tick = masuk senarai simpanan."), "id": None})
-    if not isinstance(edited, pd.DataFrame):
-        edited = view
-    t_ids = edited.loc[edited["JANA"] == True, "id"].tolist()          # noqa: E712
-    s_ids = edited.loc[edited["JANA"] != True, "id"].tolist()          # noqa: E712
-    st.caption("Tick = dijana (masuk Jana Keseluruhan). Tidak tick = masuk Senarai Simpanan apabila Hantar ditekan.")
-    if st.button(f"📤 Hantar  ({len(t_ids)} dijana  •  {len(s_ids)} simpanan)", type="primary", use_container_width=True, key="nama_hantar"):
-        ok1, e1 = ppd_set_status(t_ids, ST_TERPILIH) if t_ids else (0, [])
-        ok2, e2 = ppd_set_status(s_ids, ST_SIMPANAN) if s_ids else (0, [])
-        if e1 or e2:
-            st.error("Sebahagian gagal dikemas kini: " + " | ".join((e1 + e2)[:2]))
+def _set_many(school, ids, value):
+    sel = _sel_state().setdefault(school, set())
+    for rid in ids:
+        if value:
+            sel.add(rid)
         else:
-            st.session_state["cad_flash"] = f"✅ {nama_sek}: {ok1} nama TERPILIH untuk dijana, {ok2} nama masuk SENARAI SIMPANAN."
-            st.session_state.update({"nama_step": "sekolah", "nama_kod_sek": None, "nama_reopen": True})
+            sel.discard(rid)
+        st.session_state[_ck_key(school, rid)] = bool(value)
+
+
+def _reset_filters():
+    st.session_state["cn_q"] = ""
+    st.session_state["cn_jw"] = JAW_ALL
+    st.session_state["cn_page"] = 1
+
+
+def _forget_school(school):
+    _sel_state().pop(school, None)
+    for k in [k for k in list(st.session_state.keys()) if str(k).startswith(f"cn_ck_{school}_")]:
+        try:
+            del st.session_state[k]
+        except Exception:
+            pass
+
+
+def _badge(kind, text):
+    return f'<span class="cn-b {kind}"><i></i>{text}</span>'
+
+
+@st.dialog("Sahkan Tindakan")
+def dlg_confirm(school, nama_sek, mode, yes, no):
+    """yes / no = senarai (id, nama, no_pusat)."""
+    if mode == "terpilih":
+        st.markdown(f"### Hantar {len(yes)} sebagai TERPILIH PPD?")
+        st.write(f"{len(yes)} guru yang ditick akan masuk **Jana Keseluruhan** (TERPILIH PPD). "
+                 f"Baki {len(no)} guru yang tidak ditick akan masuk **Senarai Simpanan** secara automatik.")
+        show = yes
+    else:
+        st.markdown(f"### Simpan {len(no)} sebagai SIMPANAN PPD?")
+        st.write(f"{len(no)} guru yang tidak ditick akan masuk **Senarai Simpanan**. Guru yang ditick tidak diubah.")
+        show = no
+    st.caption("SENARAI TERPILIH" if mode == "terpilih" else "SENARAI SIMPANAN")
+    for rid, nama, pusat in show[:8]:
+        st.markdown(f"- **{nama}** · {pusat or '-'}")
+    if len(show) > 8:
+        st.caption(f"+ {len(show) - 8} lagi...")
+    c1, c2 = st.columns(2)
+    if c1.button("Batal", key="cf_batal", use_container_width=True):
+        st.rerun()
+    if c2.button("Ya, Hantar Sekarang" if mode == "terpilih" else "Ya, Simpan", type="primary", key="cf_ya", use_container_width=True):
+        msg, err = commit_pilihan(mode, [r[0] for r in yes], [r[0] for r in no], nama_sek)
+        if err:
+            st.error("Sebahagian gagal dikemas kini: " + " | ".join(err[:2]))
+        else:
+            _forget_school(school)
+            st.session_state["cad_flash"] = msg
             st.rerun()
 
 
+def commit_pilihan(mode, yes_ids, no_ids, nama_sek=""):
+    """mode 'terpilih': tick -> TERPILIH PPD, tidak tick -> SIMPANAN PPD (automatik).
+       mode 'simpanan': hanya yang tidak tick -> SIMPANAN PPD."""
+    ok1, e1 = ppd_set_status(yes_ids, ST_TERPILIH) if (mode == "terpilih" and yes_ids) else (0, [])
+    ok2, e2 = ppd_set_status(no_ids, ST_SIMPANAN) if no_ids else (0, [])
+    if mode == "terpilih":
+        msg = f"✅ {nama_sek}: {ok1} guru TERPILIH PPD (masuk Jana Keseluruhan), {ok2} guru masuk SENARAI SIMPANAN."
+    else:
+        msg = f"✅ {nama_sek}: {ok2} guru disimpan sebagai SIMPANAN PPD."
+    return msg, e1 + e2
+
+
 def render_senarai_nama(kod_ppd):
-    _banner(f"📝 Senarai Nama Cadangan - PPD {kod_ppd}", "Semak nama yang dicadangkan sekolah mengikut jawatan. Tick = dijana, tidak tick = senarai simpanan.")
+    st.markdown(CN_CSS, unsafe_allow_html=True)
+    _banner(f"📝 Senarai Nama Cadangan - PPD {kod_ppd}",
+            "Pilih sekolah → tick guru yang dipilih → Hantar. Guru yang tidak ditick masuk Senarai Simpanan secara automatik.")
     _flash()
     df = normalize(get_cadangan_df(kod_ppd=kod_ppd))
     if df.empty:
         st.warning(f"Belum ada cadangan SUP untuk PPD {kod_ppd}")
         return
-    _counts_strip(df)
-    piv = df.pivot_table(index="JAWATAN", columns="STAGE", values="id", aggfunc="count", fill_value=0)
-    for c in ("TERPILIH", "SIMPANAN", "BARU", "LOCKED"):
-        if c not in piv.columns:
-            piv[c] = 0
-    piv = piv[["BARU", "TERPILIH", "SIMPANAN", "LOCKED"]]
-    piv.columns = ["Belum disemak", "Terpilih", "Simpanan", "Sudah diproses"]
-    piv["Jumlah"] = piv.sum(axis=1)
-    st.dataframe(piv.loc[_jaw_sorted(piv.index)], use_container_width=True)
-    reopen = st.session_state.pop("nama_reopen", False)
-    if st.button("📝 Buka Senarai Nama Cadangan", type="primary", key="btn_open_nama") or reopen:
-        if not reopen:
-            st.session_state.update({"nama_step": "jawatan", "nama_jawatan": None, "nama_kod_sek": None, "nama_selall": None})
-        dlg_nama(kod_ppd)
+    smap = sekolah_map(kod_ppd)
+
+    # ---------- 1. pilih sekolah
+    labels = {}
+    for kod, g in df.groupby("KOD_SEK"):
+        work = g[g["STAGE"] != "LOCKED"]
+        if work.empty:
+            continue
+        c = work["STAGE"].value_counts().to_dict()
+        labels[kod] = (f"{_nama_sek(kod, g['NAMA_SEK'].iloc[0], smap)} ({kod}) — {len(work)} nama  "
+                       f"✅{c.get('TERPILIH', 0)}  📦{c.get('SIMPANAN', 0)}  🆕{c.get('BARU', 0)}")
+    if not labels:
+        st.info("Semua cadangan sudah diproses (dilantik/ditempatkan).")
+        return
+    order = sorted(labels, key=lambda k: labels[k])
+    school = st.selectbox("🏫 Pilih Sekolah", [""] + order, format_func=lambda k: labels.get(k, "— Pilih sekolah —"), key="cn_sek")
+    if not school:
+        _counts_strip(df)
+        st.info("Pilih sekolah di atas untuk melihat senarai guru yang dicadangkan.")
+        return
+
+    rows = df[(df["KOD_SEK"] == school) & (df["STAGE"] != "LOCKED")].reset_index(drop=True)
+    nama_sek = _nama_sek(school, rows["NAMA_SEK"].iloc[0] if not rows.empty else "", smap)
+    try:
+        import ui_theme as _ui
+        pusat = ", ".join(_ui.sup_no_pusat_list(school)) or "-"
+    except Exception:
+        pusat = "-"
+    all_ids = rows["id"].tolist()
+    sel = _sel_state()
+    if school not in sel:                                     # lalai: yang sudah TERPILIH ditick, selebihnya tidak
+        sel[school] = set(rows.loc[rows["STAGE"] == "TERPILIH", "id"].tolist())
+    chosen = sel[school] & set(all_ids)
+    g_n, e_n, total = len(chosen), len(all_ids) - len(chosen), len(all_ids)
+
+    # ---------- 2. kad ringkasan
+    c = rows["STAGE"].value_counts().to_dict()
+    jw_now = st.session_state.get("cn_jw", JAW_ALL)
+    st.markdown(f"""<div class="cn-cards">
+      <div class="cn-card"><div class="l">JAWATAN SEMASA</div><div class="v">{esc(jw_now if jw_now != JAW_ALL else 'Semua Jawatan')}</div><div class="s">{rows['JAWATAN'].nunique()} jawatan dicadangkan</div></div>
+      <div class="cn-card"><div class="l">SEKOLAH RUJUKAN</div><div class="v">{esc(nama_sek)}</div><div class="s">{esc(school)} • No Pusat: {esc(pusat)}</div></div>
+      <div class="cn-card"><div class="l">NISBAH TERPILIH</div><div class="v">{g_n} <span style="font-size:12px;color:#5f6f85;font-weight:600">/ {total} dipilih</span></div><div class="s">{e_n} Simpanan PPD (automatik jika tidak ditick)</div></div>
+      <div class="cn-card"><div class="l">STATUS SEMASA (PANGKALAN DATA)</div><div class="v" style="font-size:13px">✅ {c.get('TERPILIH', 0)} &nbsp; 📦 {c.get('SIMPANAN', 0)} &nbsp; 🆕 {c.get('BARU', 0)}</div><div class="s">Terpilih • Simpanan • Belum disemak</div></div>
+    </div>""", unsafe_allow_html=True)
+
+    # ---------- 3. carian + tapisan jawatan
+    f1, f2, f3 = _cols([3, 2, 1])
+    q = f1.text_input("Cari", key="cn_q", placeholder="Cari nama guru, IC...", label_visibility="collapsed").upper().strip()
+    jaw_opts = [JAW_ALL] + _jaw_sorted(rows["JAWATAN"].unique())
+    jw = f2.selectbox("Jawatan", jaw_opts, key="cn_jw", label_visibility="collapsed")
+    f3.button("Reset", key="cn_reset", on_click=_reset_filters, use_container_width=True)
+    view = rows
+    if q:
+        view = view[view["NAMA"].str.upper().str.contains(q, regex=False) | view["IC"].str.contains(q, regex=False)]
+    if jw and jw != JAW_ALL:
+        view = view[view["JAWATAN"] == jw]
+    view = view.reset_index(drop=True)
+    view_ids = view["id"].tolist()
+
+    sig = (school, q, jw)
+    if st.session_state.get("cn_sig") != sig:
+        st.session_state["cn_sig"] = sig
+        st.session_state["cn_page"] = 1
+
+    st.markdown(f'<div class="cn-legend"><b>LEGENDA:</b> {_badge("ok", "TERPILIH PPD")} {_badge("sim", "SIMPANAN PPD")} '
+                f'<span>Tick = akan dihantar sebagai TERPILIH PPD • Tidak tick = SIMPANAN PPD (automatik)</span></div>', unsafe_allow_html=True)
+    b1, b2, b3 = st.columns([1, 1, 3])
+    b1.button("☑ Tanda semua", key="cn_all", on_click=_set_many, args=(school, view_ids, True), use_container_width=True, disabled=not view_ids)
+    b2.button("☐ Kosongkan", key="cn_none", on_click=_set_many, args=(school, view_ids, False), use_container_width=True, disabled=not view_ids)
+    b3.caption(f"{len(view)} rekod dipaparkan • tindakan Hantar/Simpan melibatkan semua {total} nama sekolah ini")
+
+    # ---------- 4. jadual (tick = TERPILIH, tidak tick = SIMPANAN - status berubah serta-merta)
+    SPEC = [0.5, 0.5, 2.9, 1.7, 1.2, 2.0, 2.0, 1.6]
+    hc = _cols(SPEC)
+    for col, h in zip(hc, ["", "BIL", "NAMA GURU", "IC", "NO PUSAT", "SEKOLAH ASAL", "JAWATAN DICADANG", "STATUS"]):
+        col.markdown(f'<div class="cn-head">{h}</div>', unsafe_allow_html=True)
+    pages = max(1, -(-len(view) // PER_PAGE))
+    page = min(max(1, st.session_state.get("cn_page", 1)), pages)
+    chunk = view.iloc[(page - 1) * PER_PAGE: page * PER_PAGE]
+    if chunk.empty:
+        st.info("Tiada rekod dijumpai. Cuba tukar carian atau tapisan jawatan.")
+    for i, (_, r) in enumerate(chunk.iterrows()):
+        rid = r["id"]
+        on = rid in sel[school]
+        cc = _cols(SPEC)
+        cc[0].checkbox("pilih", value=on, key=_ck_key(school, rid), on_change=_toggle, args=(school, rid), label_visibility="collapsed")
+        cc[1].markdown(f'<span class="cn-sm">{(page - 1) * PER_PAGE + i + 1:02d}</span>', unsafe_allow_html=True)
+        cc[2].markdown(f'<div class="cn-nm">{esc(r["NAMA"])}</div>', unsafe_allow_html=True)
+        cc[3].markdown(f'<span class="cn-ic">{esc(r["IC"])}</span>', unsafe_allow_html=True)
+        cc[4].markdown(f'<span class="cn-sm">{esc(pusat)}</span>', unsafe_allow_html=True)
+        cc[5].markdown(f'<span class="cn-sm">{esc(nama_sek)}</span>', unsafe_allow_html=True)
+        cc[6].markdown(_badge("jw", esc(r["JAWATAN"])), unsafe_allow_html=True)
+        cc[7].markdown(_badge("ok", "TERPILIH PPD") if on else _badge("sim", "SIMPANAN PPD"), unsafe_allow_html=True)
+    if pages > 1:
+        p1, p2, p3 = st.columns([1, 2, 1])
+        if p1.button("◀ Sebelum", disabled=page <= 1, key="cn_prev", use_container_width=True):
+            st.session_state["cn_page"] = page - 1
+            st.rerun()
+        p2.markdown(f"<div style='text-align:center;padding-top:6px;color:#5f6f85;font-size:12px'>Menunjukkan {(page-1)*PER_PAGE+1}-{min(page*PER_PAGE, len(view))} dari {len(view)} • Halaman {page} / {pages}</div>", unsafe_allow_html=True)
+        if p3.button("Seterus ▶", disabled=page >= pages, key="cn_next", use_container_width=True):
+            st.session_state["cn_page"] = page + 1
+            st.rerun()
+
+    st.markdown('<div class="cn-guide"><b>Panduan:</b> tick kotak untuk memilih guru sebagai <b>TERPILIH PPD</b>. '
+                'Guru yang tidak ditick akan disimpan secara automatik sebagai <b>SIMPANAN PPD</b> apabila butang Hantar ditekan. '
+                'Semak IC dan No Pusat sebelum hantar.</div>', unsafe_allow_html=True)
+
+    # ---------- 5. dua butang di bawah
+    st.markdown(f'<div class="cn-bar"><span class="k">TERPILIH<span class="n ok">{g_n}</span></span>'
+                f'<span class="k">SIMPANAN<span class="n sim">{e_n}</span></span>'
+                f'<span class="k" style="font-weight:500">{esc(nama_sek)} • {total} nama</span></div>', unsafe_allow_html=True)
+    yes = [(r["id"], r["NAMA"], pusat) for _, r in rows.iterrows() if r["id"] in sel[school]]
+    no = [(r["id"], r["NAMA"], pusat) for _, r in rows.iterrows() if r["id"] not in sel[school]]
+    x1, x2 = st.columns(2)
+    if x1.button(f"Simpan sebagai SIMPANAN PPD ({e_n})", key="cn_btn_sim", disabled=e_n == 0, use_container_width=True):
+        dlg_confirm(school, nama_sek, "simpanan", yes, no)
+    if x2.button(f"Hantar - TERPILIH PPD ({g_n})", key="cn_btn_hantar", type="primary", disabled=g_n == 0, use_container_width=True):
+        dlg_confirm(school, nama_sek, "terpilih", yes, no)
 
 
 # ------------------------------------------------------------------ SENARAI SIMPANAN

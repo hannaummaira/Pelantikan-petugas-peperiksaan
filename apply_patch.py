@@ -28,6 +28,38 @@ patch("spm_core.py", [
     ("sub menu FLY_PPD['cadangan']", "('nama', '📝 Senarai Nama Cadangan')",
      "    'jana':       [('auto',",
      "    'cadangan':   [('sekolah', '🏫 Ikut Sekolah'), ('nama', '📝 Senarai Nama Cadangan'), ('simpanan', '📦 Senarai Simpanan')],\n    'jana':       [('auto',"),
+    ("fungsi cari imej logo/tandatangan + amaran", "def surat_aset_amaran",
+     "def render_footer():",
+     '''import os as _os
+_ASSET_DIR = _os.path.dirname(_os.path.abspath(__file__))
+LOGO_NAMES = ["jata_cropped.png", "jata_negara_hd.png", "jata_negara.png"]
+SIGN_NAMES = ["tandatangan_pengarah_hd.png", "tandatangan_pengarah.png", "tandatangan_pengarah.jpg", "tandatangan.png"]
+
+def find_asset(names):
+    """Cari fail imej di folder projek, ./, /mnt/data dan assets/."""
+    for n in names:
+        for d in (_ASSET_DIR, ".", "/mnt/data", _os.path.join(_ASSET_DIR, "assets"), "assets"):
+            p = _os.path.join(d, n)
+            if _os.path.exists(p):
+                return p
+    return None
+
+def surat_aset_amaran():
+    """Papar amaran jika logo / tandatangan surat tiada dalam repo (surat akan keluar tanpa logo/sign)."""
+    miss = []
+    if not find_asset(LOGO_NAMES):
+        miss.append("logo Jata Negara (jata_negara_hd.png)")
+    if not find_asset(SIGN_NAMES):
+        miss.append("tandatangan Pengarah (tandatangan_pengarah_hd.png)")
+    if miss:
+        st.warning("⚠️ Fail imej surat tidak dijumpai dalam repo: " + " dan ".join(miss) +
+                   ". Letakkan fail ini di folder yang sama dengan spm_core.py (atau dalam folder assets/), kemudian deploy semula. "
+                   "Tanpa fail ini, surat PDF keluar tanpa logo dan tandatangan.")
+
+def render_footer():'''),
+    ("logo: cari juga dalam assets/", "logo_path = find_asset(LOGO_NAMES)",
+     "        logo_path = None\n",
+     "        logo_path = find_asset(LOGO_NAMES)\n"),
     ("keutamaan status baru", "'TERPILIH' in s or 'SIMPANAN' in s",
      "                if 'HANTAR' in s:\n                    return 3",
      "                if 'HANTAR' in s or 'TERPILIH' in s or 'SIMPANAN' in s:\n                    return 3"),
@@ -42,6 +74,9 @@ patch("role_ppd.py", [
      '        elif menu == "cadangan" and fly_cur == "nama":\n            render_senarai_nama(kod_ppd)\n\n'
      '        elif menu == "cadangan" and fly_cur == "simpanan":\n            render_senarai_simpanan(kod_ppd)\n\n'
      '        elif menu == "cadangan":\n'),
+    ("amaran imej surat (menu Jana Surat)", "surat_aset_amaran()",
+     '        elif menu == "jana_surat":\n',
+     '        elif menu == "jana_surat":\n            surat_aset_amaran()\n'),
     ("pool Jana Keseluruhan", "jana_pool_panel(kod_ppd, df_cad_all)",
      '            df_cad_all = get_cadangan_df(kod_ppd=kod_ppd)\n\n            if df_pusat_raw.empty:\n                st.warning("⚠️ Tiada pusat_master")\n                st.stop()\n            if df_cad_all.empty:\n                st.warning(f"⚠️ Belum ada cadangan SUP untuk PPD {kod_ppd}")\n                st.stop()\n',
      '            df_cad_all = get_cadangan_df(kod_ppd=kod_ppd)\n            df_cad_all = jana_pool_panel(kod_ppd, df_cad_all)   # hanya calon TERPILIH PPD (+ yang sudah diproses)\n\n            if df_pusat_raw.empty:\n                st.warning("⚠️ Tiada pusat_master")\n                st.stop()\n            if df_cad_all.empty:\n                st.warning("⚠️ Belum ada calon untuk dijana. Lihat arahan di atas.")\n                st.stop()\n'),

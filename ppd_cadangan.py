@@ -48,7 +48,7 @@ def stage_of(status):
 
 
 def normalize(df):
-    cols = ["id", "NAMA", "IC", "KOD_SEK", "NAMA_SEK", "JAWATAN", "STATUS", "POSKOD", "STAGE"]
+    cols = ["id", "NAMA", "IC", "KOD_SEK", "NAMA_SEK", "JAWATAN", "STATUS", "POSKOD", "STAGE", "KOD_PUSAT"]
     if df is None or df.empty:
         return pd.DataFrame(columns=cols)
     rows = []
@@ -63,7 +63,8 @@ def normalize(df):
         rows.append({"id": rid, "NAMA": _pick(r, "NAMA_GURU", "nama_guru"), "IC": _pick(r, "IC_GURU", "ic_guru"),
                      "KOD_SEK": kod, "NAMA_SEK": _pick(r, "NAMA_SEKOLAH_ASAL", "nama_sekolah_asal"),
                      "JAWATAN": (_pick(r, "JAWATAN_CADANGAN", "jawatan_cadangan", "JAWATAN") or "TIADA JAWATAN").upper(),
-                     "STATUS": status, "POSKOD": _pick(r, "POSKOD_RUMAH", "poskod_rumah"), "STAGE": stage_of(status)})
+                     "STATUS": status, "POSKOD": _pick(r, "POSKOD_RUMAH", "poskod_rumah"), "STAGE": stage_of(status),
+                     "KOD_PUSAT": "" if _pick(r, "KOD_PUSAT", "kod_pusat") in ("-",) else _pick(r, "KOD_PUSAT", "kod_pusat").upper()})
     return pd.DataFrame(rows, columns=cols)
 
 

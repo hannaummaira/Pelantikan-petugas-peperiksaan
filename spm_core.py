@@ -1876,7 +1876,7 @@ def generate_surat_pdf_bytes_FIXED(nama, ic, jawatan, sek_asal, nama_sek_asal, p
         story = []
 
         # ===== HEADER - IKUT GAMBAR =====
-        logo_path = None
+        logo_path = find_asset(LOGO_NAMES)
         for cand in ["/mnt/data/jata_cropped.png", "/mnt/data/65b0dade-7a33-4312-b19b-9d5b24dd57ce.jpg", "jata_negara_hd.png","./jata_negara_hd.png","jata_negara.png","./jata_negara.png","/mnt/data/jata_negara_hd.png"]:
             if os.path.exists(cand):
                 logo_path = cand
@@ -2407,6 +2407,32 @@ FLY_JPN = {
     'guru':      [('import', '📤 Import Master 60K'), ('data', '📊 Data Sedia Ada')],
     'admin':     [('status', '🩺 Status Sistem'), ('table', '🛠️ Buat Table')],
 }
+
+import os as _os
+_ASSET_DIR = _os.path.dirname(_os.path.abspath(__file__))
+LOGO_NAMES = ["jata_cropped.png", "jata_negara_hd.png", "jata_negara.png"]
+SIGN_NAMES = ["tandatangan_pengarah_hd.png", "tandatangan_pengarah.png", "tandatangan_pengarah.jpg", "tandatangan.png"]
+
+def find_asset(names):
+    """Cari fail imej di folder projek, ./, /mnt/data dan assets/."""
+    for n in names:
+        for d in (_ASSET_DIR, ".", "/mnt/data", _os.path.join(_ASSET_DIR, "assets"), "assets"):
+            p = _os.path.join(d, n)
+            if _os.path.exists(p):
+                return p
+    return None
+
+def surat_aset_amaran():
+    """Papar amaran jika logo / tandatangan surat tiada dalam repo (surat akan keluar tanpa logo/sign)."""
+    miss = []
+    if not find_asset(LOGO_NAMES):
+        miss.append("logo Jata Negara (jata_negara_hd.png)")
+    if not find_asset(SIGN_NAMES):
+        miss.append("tandatangan Pengarah (tandatangan_pengarah_hd.png)")
+    if miss:
+        st.warning("⚠️ Fail imej surat tidak dijumpai dalam repo: " + " dan ".join(miss) +
+                   ". Letakkan fail ini di folder yang sama dengan spm_core.py (atau dalam folder assets/), kemudian deploy semula. "
+                   "Tanpa fail ini, surat PDF keluar tanpa logo dan tandatangan.")
 
 def render_footer():
     st.markdown("<div class='app-footer'>Sistem Pelantikan Petugas SPM Selangor 2026 · Jabatan Pendidikan Negeri Selangor</div>", unsafe_allow_html=True)

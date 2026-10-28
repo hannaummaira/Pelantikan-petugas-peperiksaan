@@ -2392,6 +2392,7 @@ FLY_SUP = {
 FLY_PPD = {
     'dashboard':  [('ringkasan', '📊 Ringkasan'), ('status', '📍 Status Pusat'), ('berwarna', '🎨 Paparan Warna'), ('sekolah', '🏫 Sekolah & Export')],
     'pusat':      [('senarai', '📋 Senarai Pusat'), ('poskod', '📮 Poskod Pusat')],
+    'zon':        [('tetap', '⚙️ Tetapan Zon'), ('tempat', '🚀 Jana Penempatan Zon'), ('semak', '📋 Semakan Zon')],
     'cadangan':   [('sekolah', '🏫 Ikut Sekolah'), ('nama', '📝 Senarai Nama Cadangan'), ('simpanan', '📦 Senarai Simpanan')],
     'jana':       [('auto', '🌍 Jana Auto Poskod'), ('jawatan', '👑 Ikut Jawatan')],
     'hasil':      [('ringkasan', '📋 Ringkasan Pusat'), ('sekolah', '🏫 Ikut Sekolah Asal'), ('guru', '👥 Semua Guru')],

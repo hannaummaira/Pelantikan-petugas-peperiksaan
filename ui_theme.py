@@ -128,8 +128,81 @@ THEME_CSS = """
 """
 
 
+# ======================================================================= KONTRAS TINGGI (tulisan & jadual lebih jelas)
+KONTRAS_CSS = """
+<style>
+/* ---- teks asas: gelap pekat, saiz selesa ---- */
+html, body, .stApp, [data-testid="stAppViewContainer"] {color:#0b1b33!important}
+[data-testid="stMarkdownContainer"] p, [data-testid="stMarkdownContainer"] li, [data-testid="stMarkdownContainer"] span {color:#0b1b33!important;font-size:15px;line-height:1.5}
+h1,h2,h3,h4,h5,h6 {color:#0a2a66!important;font-weight:800!important}
+[data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label, label {color:#0b1b33!important;font-weight:700!important;font-size:14px!important}
+[data-testid="stCaptionContainer"] p, .stCaption, small {color:#1e293b!important;font-size:13px!important;font-weight:500!important;opacity:1!important}
+[data-testid="stMetricLabel"] p {color:#1e293b!important;font-size:12px!important;font-weight:700!important}
+[data-testid="stMetricValue"] {color:#0a2a66!important}
+[data-baseweb="tab"] {font-weight:700!important;color:#0a2a66!important}
+[data-testid="stExpander"] summary p {font-weight:700!important;color:#0a2a66!important}
+
+/* ---- input & pilihan: sempadan jelas ---- */
+input, textarea, [data-baseweb="select"] > div, [data-baseweb="input"] {color:#0b1b33!important;background:#ffffff!important;border-color:#475569!important}
+[data-baseweb="select"] *, [data-baseweb="input"] * {color:#0b1b33!important}
+input::placeholder, textarea::placeholder {color:#475569!important;opacity:1!important}
+.stButton>button[kind="secondary"], [data-testid="stBaseButton-secondary"] {background:#ffffff!important;border:2px solid #0d47a1!important;color:#0a2a66!important;font-weight:700!important}
+.stButton>button[kind="secondary"] *, [data-testid="stBaseButton-secondary"] * {color:#0a2a66!important}
+.stButton>button:disabled {opacity:.55!important}
+
+/* ---- jadual: bingkai tebal & bayang supaya jelas dari latar ---- */
+[data-testid="stDataFrame"], [data-testid="stDataEditor"] {border:2px solid #475569!important;border-radius:6px!important;box-shadow:0 2px 6px rgba(15,23,42,.18)!important;background:#ffffff!important}
+[data-testid="stMarkdownContainer"] table, [data-testid="stTable"] table {border-collapse:collapse!important;width:100%!important;background:#fff!important;border:2px solid #475569!important}
+[data-testid="stMarkdownContainer"] th, [data-testid="stTable"] th {background:#0d47a1!important;color:#ffffff!important;font-size:13px!important;font-weight:800!important;padding:8px 10px!important;border:1px solid #0a367e!important;text-align:left!important}
+[data-testid="stMarkdownContainer"] td, [data-testid="stTable"] td {color:#0b1b33!important;font-size:14px!important;padding:7px 10px!important;border:1px solid #64748b!important}
+[data-testid="stMarkdownContainer"] tbody tr:nth-child(even) td, [data-testid="stTable"] tbody tr:nth-child(even) td {background:#eaf2ff!important}
+
+/* ---- komponen buatan sendiri (header, kad, menu, senarai nama): lebih gelap & lebih besar ---- */
+.sup-id {font-size:12px!important;color:#0a2a66!important}
+.sup-last {font-size:12px!important;color:#1e293b!important}
+.sup-red {font-size:11px!important;line-height:14px!important;color:#b71c1c!important;font-weight:600!important}
+.sup-info {font-size:12.5px!important}
+.sup-info b {color:#1e293b!important}
+.sup-note {font-size:12px!important;border:1.5px solid #90a4c4!important}
+.sup-note span {color:#1e293b!important}
+.sup-pusat .l {font-size:11px!important;color:#0a2a66!important}
+.sup-right {font-size:12px!important;opacity:1!important}
+.sup-sub-h {font-size:12px!important}
+.sup-card-h .t {font-size:13px!important}
+.sup-chip {font-size:11.5px!important;border-width:1.5px!important}
+.sup-tile .l {font-size:12px!important;color:#1e293b!important}
+.sup-tile .s {font-size:12px!important;color:#1e293b!important}
+.sup-tile .n {color:#0a2a66!important}
+.sup-box {border:1.5px solid #90a4c4!important}
+.st-key-shellmenu [class*="st-key-flymenu_"] button * {font-size:13px!important}
+.st-key-shellsub [class*="st-key-flysub_"] button * {font-size:13px!important;color:#0b1b33!important}
+.cn-card {border:1.5px solid #90a4c4!important}
+.cn-card .l {font-size:11px!important;color:#1e293b!important}
+.cn-card .s {font-size:12px!important;color:#1e293b!important}
+.cn-card .v {color:#0a2a66!important}
+.cn-head {font-size:11.5px!important;color:#0a2a66!important;background:#cfe0f7!important}
+.cn-nm {font-size:14px!important;color:#0b1b33!important}
+.cn-ic {font-size:12.5px!important;color:#0b1b33!important}
+.cn-sm {font-size:13px!important;color:#0b1b33!important}
+.cn-legend {font-size:12.5px!important;color:#1e293b!important}
+.cn-bar {border:1.5px solid #90a4c4!important}
+.cn-bar .k {font-size:11.5px!important;color:#1e293b!important}
+.cn-guide {font-size:12.5px!important;color:#0b1b33!important}
+.cn-b {font-size:11.5px!important}
+.cn-b.ok {color:#14532d!important}
+.cn-b.sim {color:#78350f!important}
+.land-p, .land-stat .l, .land-stat .s, .sch-sub, .sch-meta {color:#1e293b!important}
+.land-p {font-size:15px!important}
+.sch-name {font-size:16px!important;color:#0b1b33!important}
+.sch-code {font-size:12px!important}
+.badge {font-size:12px!important}
+</style>
+"""
+
+
 def apply_theme():
     st.markdown(THEME_CSS, unsafe_allow_html=True)
+    st.markdown(KONTRAS_CSS, unsafe_allow_html=True)
 
 
 # ------------------------------------------------------------------ header

@@ -63,6 +63,9 @@ def render_footer():'''),
     ("keutamaan status baru", "'TERPILIH' in s or 'SIMPANAN' in s",
      "                if 'HANTAR' in s:\n                    return 3",
      "                if 'HANTAR' in s or 'TERPILIH' in s or 'SIMPANAN' in s:\n                    return 3"),
+    ("sub menu FLY_PPD['zon']", "('tetap', '⚙️ Tetapan Zon')",
+     "    'cadangan':   [('sekolah', '🏫 Ikut Sekolah'),",
+     "    'zon':        [('tetap', '⚙️ Tetapan Zon'), ('tempat', '🚀 Jana Penempatan Zon'), ('semak', '📋 Semakan Zon')],\n    'cadangan':   [('sekolah', '🏫 Ikut Sekolah'),"),
 ])
 
 patch("role_ppd.py", [
@@ -98,5 +101,22 @@ patch("role_ppd.py", [
     ("Hasil Janaan: semua guru", 'hasil_row(r, v["pusat"], _hl)',
      'all_guru_rows.append({"NAMA": r.get("NAMA_GURU", ""), "NO IC": r.get("IC_GURU", ""), "JAWATAN": r.get("JAWATAN_CADANGAN") or r.get("JAWATAN") or "", "SEKOLAH ASAL": r.get("KOD_SEKOLAH_ASAL", ""), "NAMA SEKOLAH ASAL": str(r.get("NAMA_SEKOLAH_ASAL", ""))[:25], "PUSAT TUGAS": v["pusat"], "JANTINA": r.get("JANTINA", "") or r.get("jantina", ""), "TELEFON": r.get("TELEFON_GURU", "") or r.get("telefon_guru", "")})',
      'all_guru_rows.append(hasil_row(r, v["pusat"], _hl))'),
+    ("menu PPD: Penempatan Zon", "('zon', '🗺️ Penempatan Zon')",
+     "('manual', '📌 Penempatan Manual'), ",
+     "('manual', '📌 Penempatan Manual'), ('zon', '🗺️ Penempatan Zon'), "),
+    ("import ppd_zon", "from ppd_zon import",
+     "jana_pool_panel, hasil_lookup, hasil_row\n",
+     "jana_pool_panel, hasil_lookup, hasil_row\nfrom ppd_zon import render_penempatan_zon\n"),
+    ("cabang menu Penempatan Zon", "render_penempatan_zon(kod_ppd, fly_cur)",
+     '        elif menu == "cadangan" and fly_cur == "nama":\n',
+     '        elif menu == "zon":\n            render_penempatan_zon(kod_ppd, fly_cur)\n\n        elif menu == "cadangan" and fly_cur == "nama":\n'),
+])
+patch("scoped_db.py", [
+    ("jadual zon_bilik_kebal dalam skop daerah", '"cadangan_sup", "zon_bilik_kebal"}',
+     'SCOPED_TABLES = {"sekolah_master", "guru_master", "pusat_master", "bilik_kebal_master", "cadangan_sup"}',
+     'SCOPED_TABLES = {"sekolah_master", "guru_master", "pusat_master", "bilik_kebal_master", "cadangan_sup", "zon_bilik_kebal"}'),
+    ("tapisan kod_ppd untuk zon_bilik_kebal", 'table in ("sekolah_master", "zon_bilik_kebal")',
+     '    if table == "sekolah_master":',
+     '    if table in ("sekolah_master", "zon_bilik_kebal"):'),
 ])
 print("SIAP")

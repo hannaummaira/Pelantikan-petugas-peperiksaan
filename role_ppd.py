@@ -3818,6 +3818,7 @@ def render_ppd():
 
 
         elif menu == "jana_surat":
+            surat_aset_amaran()
             st.markdown(f"""
             <div style="background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%); padding:20px; border-radius:12px; color:white; margin-bottom:20px;">
                 <h2 style="margin:0; color:white;">📄 Janaan Surat Lantikan - PPD {kod_ppd} - {PPD_MAP.get(kod_ppd,'')}</h2>

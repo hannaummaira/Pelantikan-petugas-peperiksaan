@@ -4,7 +4,7 @@ import spm_core as _core
 import ui_theme as _ui
 globals().update({k: v for k, v in vars(_core).items() if not k.startswith("__")})
 globals().update({k: v for k, v in vars(_ui).items() if not k.startswith("__")})
-from ppd_cadangan import render_senarai_nama, render_senarai_simpanan, jana_pool_panel
+from ppd_cadangan import render_senarai_nama, render_senarai_simpanan, jana_pool_panel, hasil_lookup, hasil_row
 
 def render_ppd():
     kod_ppd = st.session_state.kod
@@ -1036,6 +1036,7 @@ def render_ppd():
                     st.info("Belum ada hasil janaan keseluruhan")
 
             if fly_cur == "sekolah":
+                _hl = hasil_lookup(df_pusat_raw, kod_ppd)
                 st.markdown("### 🏫 Hasil Janaan Mengikut Sekolah Asal")
                 st.caption("Setiap sekolah - berapa guru ditempatkan dan ke pusat mana")
                 sekolah_groups = {}
@@ -1056,7 +1057,7 @@ def render_ppd():
                     for key, guru_list in sorted(sekolah_groups.items()):
                         kod = key.split(" - ")[0]
                         pusat_list = list(set([g["pusat"] for g in guru_list]))
-                        summary_sekolah.append({"KOD SEKOLAH": kod, "NAMA SEKOLAH": key.split(" - ", 1)[1] if " - " in key else key, "BIL GURU": len(guru_list), "PUSAT DITEMPATKAN": ", ".join(sorted(pusat_list))})
+                        summary_sekolah.append({"KOD SEKOLAH": kod, "NAMA SEKOLAH": key.split(" - ", 1)[1] if " - " in key else key, "NO PUSAT ASAL": ", ".join(_hl["asal"].get(kod, [])) or "-", "BIL GURU": len(guru_list), "PUSAT DITEMPATKAN": ", ".join(sorted(pusat_list)), "NAMA PUSAT TUGAS": " | ".join(sorted({_hl["pusat"].get(_p, {}).get("nama", "") for _p in pusat_list} - {""}))})
                     df_sum_sek = pd.DataFrame(summary_sekolah)
                     st.dataframe(df_sum_sek, use_container_width=True, hide_index=True)
                     st.markdown("---")
@@ -1068,17 +1069,18 @@ def render_ppd():
                         rows_detail = []
                         for g in detail:
                             r = g["row"]
-                            rows_detail.append({"NAMA": r.get("NAMA_GURU", ""), "NO IC": r.get("IC_GURU", ""), "JAWATAN": r.get("JAWATAN_CADANGAN") or r.get("JAWATAN") or "", "PUSAT TUGAS": g["pusat"], "JANTINA": r.get("JANTINA", "") or r.get("jantina", ""), "TELEFON": r.get("TELEFON_GURU", "") or r.get("telefon_guru", "")})
+                            rows_detail.append(hasil_row(r, g["pusat"], _hl))
                         df_detail = pd.DataFrame(rows_detail)
                         st.dataframe(df_detail, use_container_width=True, hide_index=True)
                         st.download_button(f"📥 Export {pilih_sekolah}", to_excel(df_detail), file_name=f"hasil_{pilih_sekolah.split(' - ')[0]}_{kod_ppd}.xlsx", use_container_width=True, key=f"export_{pilih_sekolah}")
 
             if fly_cur == "guru":
+                _hl = hasil_lookup(df_pusat_raw, kod_ppd)
                 st.markdown("### 👥 Semua Guru Ditempatkan - Keseluruhan")
                 all_guru_rows = []
                 for v in tugas.values():
                     r = v["row"]
-                    all_guru_rows.append({"NAMA": r.get("NAMA_GURU", ""), "NO IC": r.get("IC_GURU", ""), "JAWATAN": r.get("JAWATAN_CADANGAN") or r.get("JAWATAN") or "", "SEKOLAH ASAL": r.get("KOD_SEKOLAH_ASAL", ""), "NAMA SEKOLAH ASAL": str(r.get("NAMA_SEKOLAH_ASAL", ""))[:25], "PUSAT TUGAS": v["pusat"], "JANTINA": r.get("JANTINA", "") or r.get("jantina", ""), "TELEFON": r.get("TELEFON_GURU", "") or r.get("telefon_guru", "")})
+                    all_guru_rows.append(hasil_row(r, v["pusat"], _hl))
                 df_all_guru = pd.DataFrame(all_guru_rows)
                 if df_all_guru.empty:
                     st.info("Belum ada guru ditempatkan")

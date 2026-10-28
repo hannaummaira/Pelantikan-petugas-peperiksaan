@@ -14,7 +14,7 @@ import time
 from types import SimpleNamespace
 
 PAGE = 1000
-SCOPED_TABLES = {"sekolah_master", "guru_master", "pusat_master", "bilik_kebal_master", "cadangan_sup"}
+SCOPED_TABLES = {"sekolah_master", "guru_master", "pusat_master", "bilik_kebal_master", "cadangan_sup", "zon_bilik_kebal"}
 
 _CODES = {}          # {scope: (masa, [kod_sekolah])}
 _CODES_TTL = 3600
@@ -50,7 +50,7 @@ def _variants(table, scope, codes):
             v.append((lambda q: q.or_(f"kod_ppd.ilike.{scope},kod_sekolah.in.({','.join(codes)})"), True))
         v.append((ppd, True))
         return v
-    if table == "sekolah_master":
+    if table in ("sekolah_master", "zon_bilik_kebal"):
         return [(ppd, True)]
     if table == "pusat_master":
         return [(ppd, False),

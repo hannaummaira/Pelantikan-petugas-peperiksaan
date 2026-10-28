@@ -10,6 +10,7 @@ ppd_cadangan.py - Aliran semakan cadangan SUP oleh PPD.
 
 Hanya lajur `status` dalam cadangan_sup digunakan (tiada perubahan skema pangkalan data).
 """
+import json
 import pandas as pd
 import streamlit as st
 import spm_core as core
@@ -503,3 +504,55 @@ def _tapis_editor(df_raw, inc):
         else:
             st.session_state["cad_flash"] = f"✅ {ok1} dilantik (kekal dalam Jana), {ok2} tidak dilantik (dialih ke Senarai Simpanan)."
             st.rerun()
+
+
+# ------------------------------------------------------------------ HASIL JANAAN: pusat tugas & sekolah ditempatkan
+def hasil_lookup(df_pusat_raw, kod_ppd):
+    """Peta pusat untuk jadual Hasil Janaan.
+       pusat[no_pusat] = {nama, kod_sek, nama_sek}  (nama pusat tugas + sekolah tuan rumah/ditempatkan)
+       asal[kod_sekolah] = [no_pusat, ...]          (pusat asal sesebuah sekolah)"""
+    smap = sekolah_map(kod_ppd)
+    pusat, asal = {}, {}
+    if df_pusat_raw is not None and not df_pusat_raw.empty:
+        for _, r in df_pusat_raw.iterrows():
+            d = r.get("data")
+            if isinstance(d, str):
+                try:
+                    d = json.loads(d)
+                except Exception:
+                    d = {}
+            if not isinstance(d, dict):
+                d = {}
+            no = str(r.get("no_pusat") or r.get("kod_pusat") or d.get("NO_PUSAT") or d.get("NO PUSAT") or "").upper().strip()
+            if not no or not no.startswith(str(kod_ppd).upper()):
+                continue
+            nama = str(r.get("nama_pusat") or d.get("NAMA_PUSAT") or d.get("NAMA PUSAT") or "").strip()
+            ks = str(r.get("kod_sekolah_tuan_rumah") or r.get("kod_sekolah") or d.get("KOD_SEKOLAH") or d.get("KOD SEKOLAH") or "").upper().strip()
+            pusat[no] = {"nama": nama, "kod_sek": ks, "nama_sek": smap.get(ks) or (nama if ks else "")}
+            if ks:
+                asal.setdefault(ks, [])
+                if no not in asal[ks]:
+                    asal[ks].append(no)
+    return {"pusat": pusat, "asal": asal, "smap": smap}
+
+
+def hasil_row(r, pusat_no, lk):
+    """Satu baris jadual hasil janaan - lengkap dengan nama pusat tugas dan sekolah ditempatkan."""
+    kod_asal = _pick(r, "KOD_SEKOLAH_ASAL", "kod_sekolah_asal").upper()
+    nama_asal = _pick(r, "NAMA_SEKOLAH_ASAL", "nama_sekolah_asal") or lk["smap"].get(kod_asal, "")
+    no = str(pusat_no or "").upper().strip()
+    info = lk["pusat"].get(no, {})
+    return {
+        "NAMA": _pick(r, "NAMA_GURU", "nama_guru"),
+        "NO IC": _pick(r, "IC_GURU", "ic_guru"),
+        "JAWATAN": _pick(r, "JAWATAN_CADANGAN", "jawatan_cadangan", "JAWATAN"),
+        "SEKOLAH ASAL": kod_asal,
+        "NAMA SEKOLAH ASAL": nama_asal,
+        "NO PUSAT ASAL": ", ".join(lk["asal"].get(kod_asal, [])) or "-",
+        "PUSAT TUGAS": no,
+        "NAMA PUSAT TUGAS": info.get("nama", ""),
+        "SEKOLAH DITEMPATKAN": info.get("kod_sek", ""),
+        "NAMA SEKOLAH DITEMPATKAN": info.get("nama_sek", ""),
+        "JANTINA": _pick(r, "JANTINA", "jantina"),
+        "TELEFON": _pick(r, "TELEFON_GURU", "telefon_guru"),
+    }

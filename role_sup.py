@@ -2,6 +2,7 @@
 """Peranan SUP - bacaan dari guru_master (satu sekolah)."""
 import spm_core as _core
 import ui_theme as _ui
+from surat_clear import render_clear_surat_ui
 globals().update({k: v for k, v in vars(_core).items() if not k.startswith("__")})
 globals().update({k: v for k, v in vars(_ui).items() if not k.startswith("__")})
 
@@ -16,7 +17,7 @@ def render_sup():
     no_pusat_list_sidebar = sup_no_pusat_list(kod)
     MENU_SUP = [('dashboard', '📊 Dashboard'), ('senarai', '📋 Senarai Guru'), ('tambah', '➕ Tambah Guru'),
                     ('import', '📤 Import Excel'), ('buang', '🗑️ Buang Guru'), ('cadangan', '📝 Cadangan Lantikan'),
-                    ('hantar', '📤 Hantar ke PPD'), ('petugas', '👥 Petugas Hadir di Sekolah Saya'), ('surat', '📄 Surat Lantikan Saya'), ('keluar', '🚪 Log Keluar')]
+                    ('hantar', '📤 Hantar ke PPD'), ('petugas', '👥 Petugas Hadir di Sekolah Saya'), ('surat', '📄 Surat Lantikan Saya'), ('clear_surat', '🗑️ Clear Surat'), ('keluar', '🚪 Log Keluar')]
     if "sup_dash_sub" not in st.session_state:
         st.session_state.sup_dash_sub = "utama"
     shell_header_sup(kod, info, no_pusat_list_sidebar)
@@ -26,7 +27,16 @@ def render_sup():
         show_flash()
         df_guru = get_guru_df(kod)
 
-        if menu == "keluar":
+        elif menu == "clear_surat":
+            # ===== CLEAR SURAT LANTIKAN - SUP =====
+            try:
+                kod_ppd_sup = str(info.get("kod_ppd", "")).upper() if isinstance(info, dict) else ""
+                kod_sekolah_sup = kod
+                render_clear_surat_ui(kod_ppd=kod_ppd_sup, role="SUP", kod_sekolah=kod_sekolah_sup)
+            except Exception as e:
+                st.error(f"Ralat clear surat: {e}")
+
+        elif menu == "keluar":
             st.session_state.clear()
             st.rerun()
 

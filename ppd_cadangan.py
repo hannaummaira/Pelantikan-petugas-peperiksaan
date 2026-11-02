@@ -557,3 +557,193 @@ def hasil_row(r, pusat_no, lk):
         "JANTINA": _pick(r, "JANTINA", "jantina"),
         "TELEFON": _pick(r, "TELEFON_GURU", "telefon_guru"),
     }
+
+def batal_semua_penempatan_ppd(kod_ppd):
+    """PPD batal semua penempatan - clear kod_pusat + reset TERPILIH PPD. Scoped ikut PPD."""
+    try:
+        from spm_core import supa, get_cadangan_df
+        res = supa.table("cadangan_sup").select("id,kod_pusat").limit(10000).execute()
+        rows = [r for r in (res.data or []) if str(r.get("kod_pusat") or "").strip() not in ("", "None", "null")]
+        if not rows:
+            return 0, "Tiada penempatan untuk dibatalkan"
+        ids = [r["id"] for r in rows if r.get("id") is not None]
+        ok, last_err = 0, ""
+        for i in range(0, len(ids), 100):
+            batch = ids[i:i+100]
+            try:
+                supa.table("cadangan_sup").update({"kod_pusat": None, "status": "TERPILIH PPD"}).in_("id", batch).execute()
+                ok += len(batch)
+            except Exception as e:
+                last_err = str(e)[:400]
+                try:
+                    supa.table("cadangan_sup").update({"status": "TERPILIH PPD"}).in_("id", batch).execute()
+                    supa.table("cadangan_sup").update({"kod_pusat": ""}).in_("id", batch).execute()
+                    ok += len(batch)
+                    last_err = ""
+                except Exception as e2:
+                    last_err = str(e2)[:400]
+        try:
+            get_cadangan_df.clear()
+        except:
+            pass
+        return ok, last_err
+    except Exception as e:
+        return 0, str(e)[:400]
+
+def batal_semua_cadangan_ppd(kod_ppd, mode="reset"):
+    """PPD batal semua cadangan. mode=reset -> status=HANTAR KE PPD (BELUM HANTAR KE SEKOLAH), mode=delete -> padam."""
+    try:
+        from spm_core import supa, get_cadangan_df
+        res = supa.table("cadangan_sup").select("id").limit(10000).execute()
+        rows = res.data or []
+        if not rows:
+            return 0, "Tiada cadangan"
+        ids = [r["id"] for r in rows if r.get("id") is not None]
+        if not ids:
+            return 0, "Tiada ID"
+        ok, last_err = 0, ""
+        for i in range(0, len(ids), 100):
+            batch = ids[i:i+100]
+            try:
+                if mode == "delete":
+                    supa.table("cadangan_sup").delete().in_("id", batch).execute()
+                else:
+                    # SAFE: hanya kod_pusat + status - tiada tarikh_jana_surat / no_surat supaya tak error PGRST204
+                    # Status HANTAR KE PPD = bermakna BELUM HANTAR KE SEKOLAH / belum dijana surat
+                    payload = {"kod_pusat": None, "status": "HANTAR KE PPD"}
+                    try:
+                        supa.table("cadangan_sup").update(payload).in_("id", batch).execute()
+                    except Exception as e:
+                        # Fallback jika kod_pusat NULL tak dibenarkan
+                        if "kod_pusat" in str(e).lower() or "null" in str(e).lower():
+                            supa.table("cadangan_sup").update({"status": "HANTAR KE PPD"}).in_("id", batch).execute()
+                            try:
+                                supa.table("cadangan_sup").update({"kod_pusat": ""}).in_("id", batch).execute()
+                            except:
+                                pass
+                        else:
+                            raise
+                ok += len(batch)
+            except Exception as e:
+                last_err = str(e)[:500]
+        try:
+            get_cadangan_df.clear()
+        except:
+            pass
+        return ok, last_err
+    except Exception as e:
+        return 0, str(e)[:500]
+
+
+# ------------------------------------------------------------------ BATAL IKUT PUSAT
+_KEY_PUSAT = ("kod_pusat", "KOD_PUSAT", "kod_pusat_tugas", "NO_PUSAT_TUGAS")
+_KEY_SURAT = ("surat_html", "surat_tarikh", "no_surat", "NO_SURAT", "SURAT_NO", "tarikh_jana_surat")
+
+
+def _val(r, d, *keys):
+    for k in keys:
+        for src in (r, d):
+            try:
+                v = src.get(k)
+            except Exception:
+                v = None
+            if v is not None and str(v).strip() not in ("", "None", "null", "nan"):
+                return str(v).strip()
+    return ""
+
+
+def _rekod_pusat(kod_ppd, pusat):
+    """Senarai rekod bukan-PK yang ditempatkan di `pusat` bagi PPD ini: [{id, data, data_str}]."""
+    res = supa.table("cadangan_sup").select("*").eq("kod_ppd", kod_ppd).limit(10000).execute()
+    out = []
+    pu = str(pusat).strip().upper()
+    for r in (res.data or []):
+        d = r.get("data")
+        data_str = isinstance(d, str)
+        if data_str:
+            try:
+                d = json.loads(d)
+            except Exception:
+                d = {}
+        if not isinstance(d, dict):
+            d = {}
+        if _val(r, d, *_KEY_PUSAT).upper() != pu:
+            continue
+        jaw = _val(r, d, "jawatan", "JAWATAN", "jawatan_dicadang", "JAWATAN_DICADANG").upper()
+        if "PENYELIA KAWASAN" in jaw:
+            continue                      # PK dibatalkan di menu Lantik Penyelia Kawasan
+        out.append({"id": r.get("id"), "data": d, "data_str": data_str})
+    return out
+
+
+def kira_di_pusat(kod_ppd, pusat):
+    try:
+        return len(_rekod_pusat(kod_ppd, pusat))
+    except Exception:
+        return 0
+
+
+def _reset_rekod(rec, status):
+    """Kosongkan pusat + no surat (kolum & data json) dan set status."""
+    d = dict(rec["data"])
+    for k in _KEY_PUSAT + _KEY_SURAT:
+        d.pop(k, None)
+    dval = json.dumps(d, ensure_ascii=False) if rec["data_str"] else d
+    tries = [
+        {"status": status, "kod_pusat": None, "no_surat": None, "data": dval},
+        {"status": status, "kod_pusat": None, "data": dval},
+        {"status": status, "kod_pusat": "", "no_surat": None, "data": dval},
+        {"status": status, "kod_pusat": None, "no_surat": None},
+        {"status": status, "kod_pusat": None},
+        {"status": status, "kod_pusat": ""},
+    ]
+    for p in tries:
+        try:
+            supa.table("cadangan_sup").update(p).eq("id", rec["id"]).execute()
+            return True
+        except Exception:
+            continue
+    return False
+
+
+def _bersih_cache():
+    try:
+        get_cadangan_df.clear()
+    except Exception:
+        pass
+
+
+def batal_penempatan_pusat(kod_ppd, pusat):
+    """Kosongkan pusat & no surat bagi petugas (bukan PK) di satu pusat. Status -> TERPILIH PPD. Pulang (ok, mesej)."""
+    try:
+        recs = _rekod_pusat(kod_ppd, pusat)
+        if not recs:
+            return 0, "Tiada penempatan di pusat ini"
+        ok = sum(1 for r in recs if _reset_rekod(r, ST_TERPILIH))
+        _bersih_cache()
+        return ok, ("" if ok else "Gagal kemas kini pangkalan data")
+    except Exception as e:
+        return 0, str(e)[:400]
+
+
+def batal_cadangan_pusat(kod_ppd, pusat, mode="reset"):
+    """mode=reset -> status HANTAR KE PPD (pusat & no surat dikosongkan); mode=delete -> padam rekod. Pulang (ok, mesej)."""
+    try:
+        recs = _rekod_pusat(kod_ppd, pusat)
+        if not recs:
+            return 0, "Tiada cadangan di pusat ini"
+        ok = 0
+        if mode == "delete":
+            ids = [_pyid(r["id"]) for r in recs if r["id"] is not None]
+            for i in range(0, len(ids), 100):
+                try:
+                    supa.table("cadangan_sup").delete().in_("id", ids[i:i + 100]).execute()
+                    ok += len(ids[i:i + 100])
+                except Exception:
+                    pass
+        else:
+            ok = sum(1 for r in recs if _reset_rekod(r, "HANTAR KE PPD"))
+        _bersih_cache()
+        return ok, ("" if ok else "Gagal kemas kini pangkalan data")
+    except Exception as e:
+        return 0, str(e)[:400]

@@ -113,7 +113,8 @@ def _calon_penyelia(kod_ppd):
     if df.empty:
         return pd.DataFrame()
     # tapis jawatan penyel ia
-    mask = df["JAWATAN"].astype(str).str.upper().str.contains("PENYELIA")
+    _j = df["JAWATAN"].astype(str).str.upper()
+    mask = _j.str.contains("PENYELIA") & ~_j.str.contains("AMALI SAINS|KANAN SAINS|MATA PELAJARAN")
     df = df[mask]
     return df
 

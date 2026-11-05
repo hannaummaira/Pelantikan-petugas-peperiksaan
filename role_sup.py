@@ -35,7 +35,9 @@ def render_sup():
     if "sup_dash_sub" not in st.session_state:
         st.session_state.sup_dash_sub = "utama"
     shell_header_sup(kod, info, no_pusat_list_sidebar)
-    menu, fly_cur, col_main = shell_layout("sup_menu_sel", MENU_SUP, FLY_SUP, "sup_dash_sub", "fly_sup")
+    FLY_SUP_X = dict(FLY_SUP)
+    FLY_SUP_X['surat'] = [('jadual', '📑 SPM - Jadual Jawatan'), ('individu', '📄 SPM - Surat Individu'), ('amali', '🔬 Amali Sains')]
+    menu, fly_cur, col_main = shell_layout("sup_menu_sel", MENU_SUP, FLY_SUP_X, "sup_dash_sub", "fly_sup")
 
     with col_main:
         show_flash()
@@ -145,7 +147,7 @@ def render_sup():
                             j = str(r.get(col_jawatan_sup, "")).strip()
                             if j and j not in jawatan_sup_list:
                                 jawatan_sup_list.append(j)
-                    order_j = ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik"]
+                    order_j = ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik", "Penyelia Kanan Sains", "Penyelia Mata Pelajaran", "Pembantu Makmal"]
                     jawatan_sup_sorted = sorted(jawatan_sup_list, key=lambda x: (order_j.index(x) if x in order_j else 99, x))
 
                     if "filter_jawatan_sup_senarai" not in st.session_state:
@@ -155,7 +157,7 @@ def render_sup():
                     with col_f1_sup:
                         safe_default_sup = [x for x in st.session_state["filter_jawatan_sup_senarai"] if x in jawatan_sup_sorted]
                         if not jawatan_sup_sorted:
-                            jawatan_sup_sorted = ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik"]
+                            jawatan_sup_sorted = ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik", "Penyelia Kanan Sains", "Penyelia Mata Pelajaran", "Pembantu Makmal"]
                             safe_default_sup = st.session_state["filter_jawatan_sup_senarai"]
                         if st.session_state["filter_jawatan_sup_senarai"] and not safe_default_sup:
                             for v in st.session_state["filter_jawatan_sup_senarai"]:
@@ -226,7 +228,7 @@ def render_sup():
                                 with c2:
                                     e_tel = st.text_input("TELEFON GURU", value=guru_edit.get("TELEFON_GURU", "") or guru_edit.get("TELEFON", ""))
                                     e_email = st.text_input("EMAIL GURU", value=guru_edit.get("EMAIL_GURU", ""))
-                                    e_jawatan = st.selectbox("JAWATAN CADANGAN", ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik"], index=0)
+                                    e_jawatan = st.selectbox("JAWATAN CADANGAN", ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik", "Penyelia Kanan Sains", "Penyelia Mata Pelajaran", "Pembantu Makmal"], index=0)
                                     e_pengalaman = st.text_input("PENGALAMAN SPM", value=guru_edit.get("PENGALAMAN_SPM", ""))
                                     e_no_pusat = st.text_input("NO PUSAT ASAL", value=guru_edit.get("NO_PUSAT_ASAL", ""))
 
@@ -260,7 +262,7 @@ def render_sup():
                 with col2:
                     tel = st.text_input("NO TELEFON GURU * (Wajib)")
                     email = st.text_input("EMAIL GURU")
-                    jaw = st.selectbox("JAWATAN CADANGAN (Betul)", ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik"])
+                    jaw = st.selectbox("JAWATAN CADANGAN (Betul)", ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik", "Penyelia Kanan Sains", "Penyelia Mata Pelajaran", "Pembantu Makmal"])
                     pengalaman = st.text_input("PENGALAMAN SPM (Tahun) - SUP isi", placeholder="Contoh: 3 tahun")
                     no_pusat_asal = st.text_input("NO PUSAT ASAL", placeholder="Contoh: BA142")
 
@@ -412,7 +414,10 @@ def render_sup():
             "Ketua Pengawas Hospital",
             "Pengawas Hospital",
             "Pengawas Pengiring",
-            "Pengemas Bilik"
+            "Pengemas Bilik",
+            "Penyelia Kanan Sains (Amali Sains - guru sekolah asal)",
+            "Penyelia Mata Pelajaran (Amali Sains - guru sekolah asal)",
+            "Pembantu Makmal (Amali Sains - guru sekolah asal)"
         ]
                 if fly_cur == "pilih":
                     st.markdown("### Pilih Guru (EMAIL kosong dibenarkan)")
@@ -833,6 +838,12 @@ def render_sup():
                                 st.dataframe(df_display_petugas, use_container_width=True, hide_index=True)
                                 st.download_button(f"📥 Export Petugas Luar {pilih_pusat_sup}", to_excel(df_display_petugas), file_name=f"petugas_LUAR_{pilih_pusat_sup}_{kod}.xlsx", use_container_width=True)
                     # ===== END FIX PETUGAS =====
+
+        elif menu == "surat" and fly_cur == "amali":
+            import amali_sains as _amali
+            surat_panel("SUP", kod_ppd=str(info.get("kod_ppd", "")).upper(), kod_sekolah=kod)
+            st.header(f"🔬 Surat Lantikan Amali Sains - {kod} - {info.get('nama_sekolah','')}")
+            _amali.render_surat_sup(kod, str(info.get("kod_ppd", "")).upper(), get_cadangan_df(kod_sekolah=kod))
 
         elif menu == "surat":
             surat_panel("SUP", kod_ppd=str(info.get("kod_ppd", "")).upper(), kod_sekolah=kod)

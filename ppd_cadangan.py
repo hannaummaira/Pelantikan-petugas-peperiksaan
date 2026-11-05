@@ -21,7 +21,8 @@ ST_TERPILIH = "TERPILIH PPD"
 ST_SIMPANAN = "SIMPANAN PPD"
 _LOCK = ("DILANTIK", "DITEMPATKAN", "SURAT", "LULUS", "DIJANA")     # sudah diproses - jangan diusik
 ORDER_JAWATAN = ["KETUA PENGAWAS", "TIMBALAN KETUA PENGAWAS", "PENYELIA KAWASAN", "PENGAWAS PEPERIKSAAN",
-                 "SELENGGARA BILIK KEBAL", "JURU TULIS", "JURU BACA"]
+                 "SELENGGARA BILIK KEBAL", "JURU TULIS", "JURU BACA",
+                 "PENYELIA KANAN SAINS", "PENYELIA MATA PELAJARAN", "PEMBANTU MAKMAL"]
 
 
 # ------------------------------------------------------------------ pembantu data

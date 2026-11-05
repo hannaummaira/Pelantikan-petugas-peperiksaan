@@ -310,6 +310,12 @@ def get_jpn_template_for_jawatan(jawatan_str):
         norm = {re.sub(r"\s+", " ", k).upper().strip(): v for k, v in all_t.items() if v and len(v) > 30}
         if jw in norm:
             return norm[jw]
+        try:
+            import amali_sains as _am
+            if _am.is_amali_jaw(jw):      # jawatan Amali: tepat atau templat lalai Amali (tidak boleh jatuh ke templat SPM)
+                return _am.default_template(jw)
+        except Exception:
+            pass
         # padanan separa: pilih nama jawatan paling panjang yang sepadan (elak "PENGAWAS" tersalah ambil "KETUA PENGAWAS")
         cands = [k for k in norm if k in jw or jw in k]
         if cands:

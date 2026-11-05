@@ -39,8 +39,14 @@ def ruj_dari_no(no):
     return m.group(1).strip() if m and m.group(1).strip() else None
 
 
-def _senarai_no(df):
-    """Semua no surat (kolum no_surat + data.SURAT_NO_JANA + data.surat_no) dalam DataFrame cadangan."""
+def _is_amali_row(r, d):
+    """Rekod ini membawa surat Amali Sains (AMALI_NO atau jawatan khas Amali)?"""
+    j = " ".join(str(x or "") for x in (r.get("JAWATAN_CADANGAN"), r.get("jawatan_cadangan"), d.get("JAWATAN_CADANGAN"), d.get("JAWATAN"))).upper()
+    return "AMALI SAINS" in j or "PENYELIA KANAN SAINS" in j or "PENYELIA MATA PELAJARAN" in j or "PEMBANTU MAKMAL" in j
+
+
+def _senarai_no(df, amali=None):
+    """Semua no surat dalam DataFrame cadangan. amali=True -> siri Amali sahaja; False -> siri SPM sahaja; None -> semua."""
     out = []
     if df is None or getattr(df, "empty", True):
         return out
@@ -53,26 +59,33 @@ def _senarai_no(df):
                 d = {}
         if not isinstance(d, dict):
             d = {}
-        for v in (r.get("no_surat"), r.get("NO_SURAT"), d.get("SURAT_NO_JANA"), d.get("no_surat")):
+        am_row = _is_amali_row(r, d)
+        cand = [(r.get("no_surat"), am_row), (r.get("NO_SURAT"), am_row), (d.get("SURAT_NO_JANA"), am_row), (d.get("no_surat"), am_row),
+                (d.get("AMALI_NO"), True)]
+        for v, is_am in cand:
             if v and str(v).strip() not in ("", "None", "nan"):
-                out.append(str(v).strip())
+                if amali is None or bool(amali) == bool(is_am):
+                    out.append(str(v).strip())
     return out
 
 
-def max_no(df, ruj):
+def max_no(df, ruj, amali=None):
     """Turutan global tertinggi yang sudah digunakan dalam siri `ruj` (0 jika belum ada). df = rekod PPD itu sahaja."""
     mx = 0
-    for no in _senarai_no(df):
+    for no in _senarai_no(df, amali):
         n = parse_no(no, ruj)
         if n:
             mx = max(mx, n)
     return mx
 
 
-def ruj_terkini(df):
-    """No rujukan fail daripada no surat berjilid terakhir PPD ini, atau lalai."""
-    for no in reversed(_senarai_no(df)):
+RUJ_AMALI_LALAI = "JPNS.SPP 600-7/1/2"
+
+
+def ruj_terkini(df, amali=False):
+    """No rujukan fail terakhir PPD ini bagi siri SPM (amali=False) atau Amali (amali=True), atau lalai."""
+    for no in reversed(_senarai_no(df, bool(amali))):
         r = ruj_dari_no(no)
         if r and parse_no(no, r):
             return r
-    return RUJ_LALAI
+    return RUJ_AMALI_LALAI if amali else RUJ_LALAI

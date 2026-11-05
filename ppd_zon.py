@@ -43,7 +43,7 @@ def _perlu_manual(d, jk, core):
 def kelas_jawatan(j):
     """KP / TKP / PENGAWAS (jawatan auto). Jawatan khas & penyelia = None (kekal penempatan manual)."""
     j = str(j or "").upper()
-    if any(x in j for x in ("HOSPITAL", "PENGIRING", "JURU", "PENGEMAS", "PENYELIA", "SELENGGARA", "KHAS")):
+    if any(x in j for x in ("HOSPITAL", "PENGIRING", "JURU", "PENGEMAS", "PENYELIA", "SELENGGARA", "KHAS", "MAKMAL", "AMALI")):
         return None
     if "TIMBALAN" in j and "KETUA" in j:
         return "TKP"

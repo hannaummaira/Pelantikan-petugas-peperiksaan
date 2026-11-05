@@ -100,7 +100,9 @@ def jawatan_of(r):
 
 
 def is_pk(r):
-    return "PENYELIA" in jawatan_of(r)
+    j = jawatan_of(r)
+    # PKS / PMP / Penyelia Kawasan Amali bukan Penyelia Kawasan SPM
+    return "PENYELIA" in j and "AMALI SAINS" not in j and "KANAN SAINS" not in j and "MATA PELAJARAN" not in j
 
 
 def tanpa_pk(df):

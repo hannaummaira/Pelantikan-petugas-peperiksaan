@@ -166,6 +166,12 @@ def muat(kod_ppd):
             continue
         r = lengkapkan(r0, kod_ppd)
         d = _data(r)
+        try:
+            import amali_sains as _am
+            if _am.is_amali_jaw(_g(r, d, "JAWATAN_CADANGAN", "jawatan_cadangan", "JAWATAN")):
+                continue        # PKS/PMP/PM diurus dalam menu Lantikan Petugas Amali
+        except Exception:
+            pass
         status = _g(r, d, "status", "STATUS")
         pusat = _g(r, d, "kod_pusat", "KOD_PUSAT", "kod_pusat_tugas", "NO_PUSAT_TUGAS").upper()
         no_col = _s(r.get("no_surat") or r.get("NO_SURAT"))

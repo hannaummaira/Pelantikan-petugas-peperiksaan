@@ -9,7 +9,7 @@ import streamlit as st
 import spm_core as core
 from kuota_pusat import simpan_pusat, kelas_auto, kuota_pusat, no_pusat as _no_pusat, kod_tuan_rumah
 
-FLY_SP = [("sekolah", "🏫 Selenggara Sekolah"), ("pusat", "🏢 Selenggara Pusat")]
+FLY_SP = [("sekolah", "🏫 Selenggara Sekolah"), ("pusat", "🏢 Selenggara Pusat"), ("amali", "🔬 Pusat Amali Sains")]
 
 def _db():
     return core._RAW
@@ -292,6 +292,10 @@ def _panel_pusat(kod_ppd):
 
 def render_selenggara_sp(fly_cur):
     fly_cur = fly_cur or "sekolah"
+    if fly_cur == "amali":
+        import amali_sains as _am
+        _am.render_jpn_amali()
+        return
     st.header("🛠️ Selenggara Sekolah & Pusat Peperiksaan")
     st.caption("Perubahan di sini terus masuk ke data PPD dan SUP serta dipaparkan di halaman hadapan PPD.")
     kod_ppd = _pilih_daerah(fly_cur)

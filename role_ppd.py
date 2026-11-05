@@ -90,7 +90,7 @@ def render_ppd():
                     ('selenggara', '🔐 Selenggara Bilik Kebal'), ('penyelia', '🔐 Lantik Penyelia Kawasan'), ('cadangan', '📋 Cadangan SUP'), ('jana', '🚀 Jana Keseluruhan'),
                     ('manual', '📌 Penempatan Manual'), ('zon', '🗺️ Penempatan Zon'), ('hasil', '📋 Hasil Janaan'),
                     ('semakan', '🔍 Semakan Lantikan'), ('kelulusan', '✅ Kelulusan'), ('jana_surat', '📄 Janaan Surat Lantikan'),
-                    ('sah', '🏅 Sah Lantik'), ('batal', '🗑️ Batal Semua'), ('export', '📥 Export'), ('keluar', '🚪 Log Keluar')]
+                    ('sah', '🏅 Sah Lantik'), ('amali', '🔬 Lantikan Petugas Amali'), ('batal', '🗑️ Batal Semua'), ('export', '📥 Export'), ('keluar', '🚪 Log Keluar')]
     # Sub menu: "Status Pusat" (dashboard) dipindah ke Pusat di PPD dan dinamakan "Selenggara Pusat"
     FLY_PPD_X = dict(FLY_PPD)
     FLY_PPD_X['dashboard'] = [x for x in FLY_PPD.get('dashboard', []) if x[0] not in ('status', 'berwarna')]
@@ -107,6 +107,8 @@ def render_ppd():
     # Sah Lantik: semua petugas yang sudah ada no surat
     FLY_PPD_X['kelulusan'] = [('keseluruhan', '✅ Sah Keseluruhan'), ('pusat', '🏫 Sah Ikut Pusat')]
     FLY_PPD_X['sah'] = [('hantar', '📤 Hantar ke Sekolah'), ('muat', '📥 Muat Turun'), ('senarai', '👥 Senarai Disahkan'), ('pk', '🔐 Penyelia Kawasan (Bilik Kebal)')]
+    import amali_sains as _amali
+    FLY_PPD_X['amali'] = _amali.FLY_AMALI
     shell_header_ppd(kod_ppd)
     menu, fly_cur, col_main = shell_layout("ppd_menu_sel", MENU_PPD, FLY_PPD_X, None, "fly_ppd")
 
@@ -693,7 +695,7 @@ def render_ppd():
                         return True
                     if j == "PENGAWAS PEPERIKSAAN" or (j.startswith("PENGAWAS") and "HOSPITAL" not in j and "PENGIRING" not in j and "KHAS" not in j):
                         # Pengawas Peperiksaan biasa sahaja
-                        if "HOSPITAL" in j or "PENGIRING" in j or "JURU" in j or "PENGEMAS" in j or "PENYELIA" in j or "SELENGGARA" in j:
+                        if "HOSPITAL" in j or "PENGIRING" in j or "JURU" in j or "PENGEMAS" in j or "PENYELIA" in j or "SELENGGARA" in j or "MAKMAL" in j:
                             return False
                         return True
                     # Semua lain (Juru Tulis, Juru Baca, Hospital, Pengiring, Pengemas, Penyelia, Selenggara) = False - tak masuk auto
@@ -803,7 +805,7 @@ def render_ppd():
                             # Hanya Pengawas Peperiksaan exact sahaja
                             if "PENGAWAS PEPERIKSAAN" not in j:
                                 return False
-                            if any(k in j for k in ["PENYELIA", "JURU", "HOSPITAL", "PENGIRING", "PENGEMAS", "SELENGGARA", "BILIK KEBAL"]):
+                            if any(k in j for k in ["PENYELIA", "JURU", "HOSPITAL", "PENGIRING", "PENGEMAS", "SELENGGARA", "BILIK KEBAL", "MAKMAL"]):
                                 return False
                             return True
                         df_pool_biasa = [r for _, r in df_pool_shuffled.iterrows() if is_pengawas_biasa_only(r)]
@@ -2607,6 +2609,9 @@ def render_ppd():
 
         elif menu == "penyelia":
             _pp.render_penyelia(kod_ppd, fly_cur)
+
+        elif menu == "amali":
+            _amali.render_menu(kod_ppd, fly_cur)
 
         elif menu == "jana_surat":
             surat_panel("PPD", kod_ppd=kod_ppd)

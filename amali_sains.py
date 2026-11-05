@@ -201,9 +201,10 @@ def render_jpn_amali():
 
 
 # ============================================================ MENU PPD: Lantikan Petugas Amali
-FLY_AMALI = [("pusat", "🔬 Pilih Pusat Amali"), ("tempat", "📍 Tempatkan PKS/PMP/PM"), ("sahkan", "✔️ Sahkan Petugas"), ("lantik", "👤 Lantik"),
-             ("semak", "🔍 Semak"), ("jana", "📄 Jana Surat"), ("cetak", "🖨️ Cetak Surat"), ("hantar", "📤 Hantar ke Sekolah")]
-STAGE_NAMA = {-1: "Calon", 1: "Disahkan", 2: "Dilantik", 3: "Disemak", 4: "Surat dijana", 5: "Dihantar ke sekolah"}
+FLY_AMALI = [("pusat", "🔬 Selenggara Pusat Amali"), ("petugas", "👥 Petugas Amali"), ("tempat", "📍 Tempatkan PKS/PMP/PM"),
+             ("semak", "🔍 Semak Petugas"), ("lantik", "👤 Lantik Petugas"), ("jana", "📄 Jana Surat Petugas"),
+             ("cetak", "🖨️ Cetak Surat"), ("hantar", "📤 Hantar ke Sekolah")]
+STAGE_NAMA = {-1: "Belum disemak", 1: "Disemak", 2: "Dilantik", 4: "Surat dijana", 5: "Dihantar ke sekolah"}
 _PK_STATUS_BUANG = ("TERPILIH", "SIMPANAN", "BATAL")
 
 
@@ -270,14 +271,17 @@ def muat_semua(kod_ppd, ams=None):
         no_col = _s(r.get("no_surat") or r.get("NO_SURAT"))
         spm_rank = al.peringkat(status, spm_pusat, no_col)
         pusat, bk, jaga = "", "", []
+        kecuali = str(d.get("AMALI_KECUAL", "")).strip().lower() in ("1", "true", "ya")
+        paksa = str(d.get("AMALI_PAKSA", "")).strip().lower() in ("1", "true", "ya")
+        ov = _s(d.get("AMALI_PUSAT")).upper()
         if jn in ("KP", "TKP"):
-            pusat = spm_pusat if spm_rank >= 0 else ""
+            pusat = ov or (spm_pusat if spm_rank >= 0 else "")
         elif jn == "PK":
             bk = al._g(r, d, "kod_bilik_kebal_explicit", "kod_bilik_kebal", "KOD_BILIK_KEBAL").upper() or spm_pusat
             jaga = _list(d.get("pusat_jagaan") or d.get("pusat_jagaan_str") or r.get("pusat_jagaan") or r.get("pusat_bawah_bilik_kebal"))
             if any(x in status.upper() for x in _PK_STATUS_BUANG) or not bk:
                 bk = ""
-            pusat = bk
+            pusat = ov or bk
         else:
             pusat = _s(d.get("AMALI_PUSAT")).upper()
         try:
@@ -286,12 +290,14 @@ def muat_semua(kod_ppd, ams=None):
             stg = -1
         pusat_kira = pusat if jn != "PK" else next((x for x in jaga if x in ams), "")
         # layak Amali: KP/TKP di pusat Amali; PK yang menjaga sekurang-kurangnya satu pusat Amali; PKS/PMP/PM yang ditempatkan di pusat Amali
-        layak = bool(pusat) and ((pusat in ams) if jn in ("KP", "TKP", "PKS", "PMP", "PM") else bool(pusat_kira))
+        layak = bool(pusat) and ((pusat in ams) if jn in ("KP", "TKP", "PKS", "PMP", "PM") else (bool(pusat_kira) or paksa))
+        if kecuali:
+            layak, stg = False, -1
         rows.append({"id": al._pyid(r0.get("id")), "nama": al._g(r, d, "NAMA_GURU", "nama_guru"), "ic": al._g(r, d, "IC_GURU", "ic_guru"),
                      "jn": jn, "jaw_spm": jaw, "jaw": (_pmp_kanon(jaw) if jn == "PMP" else _JAW_AMALI[jn]),
                      "sek": al._g(r, d, "KOD_SEKOLAH_ASAL", "kod_sekolah_asal", "KOD_SEKOLAH", "kod_sekolah").upper(),
                      "nama_sek": al._g(r, d, "NAMA_SEKOLAH_ASAL", "nama_sekolah_asal"), "tel": al._g(r, d, "TELEFON_GURU", "telefon_guru"),
-                     "pusat": pusat, "layak": layak, "spm_rank": spm_rank, "status": status, "stage": stg if (layak or stg >= 0) else -1,
+                     "pusat": pusat, "layak": layak, "kecuali": kecuali, "paksa": paksa, "spm_rank": spm_rank, "status": status, "stage": stg if layak else -1,
                      "data": d, "data_str": isinstance(r0.get("data"), str), "no": _s(d.get("AMALI_NO")), "tarikh": _s(d.get("AMALI_TARIKH")),
                      "tarikh_hantar": _s(d.get("AMALI_TARIKH_HANTAR"))})
     return raw, rows
@@ -313,19 +319,19 @@ def _info_bk(info, p):
 
 
 def _bar(rows):
-    c = {k: 0 for k in (-1, 1, 2, 3, 4, 5)}
+    c = {k: 0 for k in (-1, 1, 2, 4, 5)}
     for r in rows:
-        if r["layak"] or r["stage"] >= 0:
+        if r["layak"]:
             c[r["stage"] if r["stage"] in c else -1] += 1
-    cols = st.columns(6)
-    for col, k in zip(cols, (-1, 1, 2, 3, 4, 5)):
+    cols = st.columns(5)
+    for col, k in zip(cols, (-1, 1, 2, 4, 5)):
         col.metric(STAGE_NAMA[k], c[k])
 
 
 def _ada_amali(kod_ppd):
     ams = amali_set(kod_ppd)
     if not ams:
-        st.warning("Belum ada pusat Amali Sains. Tick di submenu **🔬 Pilih Pusat Amali** dahulu.")
+        st.warning("Belum ada pusat Amali Sains. Tick di submenu **🔬 Selenggara Pusat Amali** dahulu.")
     return ams
 
 
@@ -362,11 +368,31 @@ def _semula():
     al._clear()
 
 
+def _ringkas_pusat(ams, info, rows):
+    out = []
+    for p in ams:
+        ada = [r for r in rows if r["layak"] and r["pusat"] == p]
+        d = {"NO PUSAT": p, "NAMA PUSAT": info.get(p, {}).get("nama", "")}
+        for jn, lbl in (("KP", "KP"), ("TKP", "TKP"), ("PK", "PK"), ("PKS", "PKS"), ("PMP", "PMP"), ("PM", "PM")):
+            d[lbl] = sum(1 for r in ada if r["jn"] == jn)
+        d["JUMLAH"] = len(ada)
+        out.append(d)
+    return pd.DataFrame(out)
+
+
 # ---------------------------------------------------------------- 1. Pilih Pusat Amali
 def render_pusat(kod_ppd):
     st.header(f"🔬 Lantikan Petugas Amali - Pilih Pusat Amali - PPD {kod_ppd} - {core.PPD_MAP.get(kod_ppd, '')}")
     al._show_flash()
     render_tetapan_pusat(kod_ppd, "ppd")
+    ams = amali_set(kod_ppd)
+    info = al.pusat_info(kod_ppd)
+    ams = sorted(p for p in ams if p in info)
+    if ams:
+        _, rows = muat_semua(kod_ppd, set(ams))
+        st.markdown("#### 📋 Pusat Amali Sains terpilih dan petugas ditarik daripada SPM")
+        st.caption("Petugas SPM (KP, TKP, Penyelia Kawasan) di pusat ini terus ditarik. PKS/PMP/PM ditempatkan di submenu Tempatkan.")
+        st.dataframe(_ringkas_pusat(ams, info, rows), use_container_width=True, hide_index=True, height=min(480, 60 + 35 * len(ams)))
 
 
 # ---------------------------------------------------------------- 2. Tempatkan PKS / PMP / PM
@@ -417,14 +443,141 @@ def render_penempatan(kod_ppd):
     if st.button(f"✅ Tempatkan {len(sel)} {jaw} di {pusat}", type="primary", disabled=not sel, key="am_pl_ok"):
         ok = sum(1 for r in sel if _kemas(r, {"AMALI_PUSAT": pusat}))
         _semula()
-        al._flash("success", f"✅ {ok} {jaw} ditempatkan di {pusat}. Teruskan di Sahkan Petugas.")
+        al._flash("success", f"✅ {ok} {jaw} ditempatkan di {pusat}. Teruskan di Semak Petugas.")
         st.rerun()
 
 
-# ---------------------------------------------------------------- 3-5. Sahkan / Lantik / Semak
-_TAHAP = {"sahkan": (-1, 1, "Sahkan Petugas", "✔️", "Calon petugas Amali: KP/TKP/PK SPM di pusat Amali dan PKS/PMP/PM yang telah ditempatkan."),
-          "lantik": (1, 2, "Lantik", "👤", "Petugas yang telah disahkan. Lantik untuk meneruskan ke semakan."),
-          "semak": (2, 3, "Semak", "🔍", "Semak senarai lantikan. Selepas disemak, ia boleh dijana suratnya.")}
+# ---------------------------------------------------------------- 3. Petugas Amali (senarai ditarik daripada SPM)
+def render_petugas(kod_ppd):
+    st.header(f"🔬 Lantikan Petugas Amali - Petugas Amali - PPD {kod_ppd} - {core.PPD_MAP.get(kod_ppd, '')}")
+    al._show_flash()
+    ams = _ada_amali(kod_ppd)
+    if not ams:
+        return
+    info = al.pusat_info(kod_ppd)
+    _, rows = muat_semua(kod_ppd, ams)
+    _bar(rows)
+    st.caption("Semua jawatan Amali ada di sini sahaja, tidak bercampur dengan menu SPM. KP, TKP dan Penyelia Kawasan yang telah dilantik SPM di pusat Amali terus ditarik; PKS/PMP/PM daripada penempatan Amali.")
+    ada = [r for r in rows if r["layak"]]
+    if not ada:
+        st.info("Belum ada petugas di pusat Amali. Pastikan petugas SPM telah dilantik di pusat Amali, atau tempatkan PKS/PMP/PM.")
+        return
+    st.markdown("#### Ringkasan ikut pusat")
+    st.dataframe(_ringkas_pusat(sorted(ams), info, rows), use_container_width=True, hide_index=True, height=min(360, 60 + 35 * len(ams)))
+    st.markdown("#### Senarai petugas")
+    sub = ada
+    jf = st.multiselect("Jawatan", [j for j in JAWATAN_AMALI if any(r["jaw"] == j for r in ada)], key="am_pt_jf")
+    pf = st.multiselect("Pusat", sorted({r["pusat"] for r in ada}), key="am_pt_pf")
+    sub = sorted([r for r in ada if (not jf or r["jaw"] in jf) and (not pf or r["pusat"] in pf)],
+                 key=lambda r: (r["pusat"], JAWATAN_AMALI.index(r["jaw"]), r["nama"]))
+    df = _jadual(sub, info)
+    st.dataframe(df, use_container_width=True, hide_index=True, height=min(480, 60 + 35 * len(df)))
+    st.download_button("📊 Muat Turun Senarai (Excel)", core.to_excel(df), file_name=f"petugas_amali_{kod_ppd}_{datetime.date.today()}.xlsx", key="am_pt_xl")
+
+
+# ---------------------------------------------------------------- 4. Semak Petugas (PPD boleh ubah / ganti)
+def render_semak(kod_ppd):
+    st.header(f"🔬 Lantikan Petugas Amali - Semak Petugas - PPD {kod_ppd} - {core.PPD_MAP.get(kod_ppd, '')}")
+    al._show_flash()
+    ams = _ada_amali(kod_ppd)
+    if not ams:
+        return
+    info = al.pusat_info(kod_ppd)
+    _, rows = muat_semua(kod_ppd, ams)
+    _bar(rows)
+    st.caption("Semak senarai. PPD boleh keluarkan petugas yang tidak sesuai, atau ganti dengan petugas lain. Selepas semak, teruskan ke Lantik Petugas.")
+    belum = [r for r in rows if r["layak"] and r["stage"] == -1]
+    sudah = [r for r in rows if r["layak"] and r["stage"] == 1]
+    t1, t2, t3 = st.tabs([f"🔍 Semak ({len(belum)})", "✏️ Ubah / Ganti", f"↩️ Dikeluarkan / Disemak ({sum(1 for r in rows if r['kecuali']) + len(sudah)})"])
+
+    with t1:
+        if not belum:
+            st.success("✅ Tiada petugas menunggu semakan.")
+        else:
+            terpilih = _skop_pilih(belum, info, "semak")
+            if st.button(f"🔍 Tandakan {len(terpilih)} petugas sebagai disemak", type="primary", disabled=not terpilih, key="am_sm_ok"):
+                ok = 0
+                for r in terpilih:
+                    b = {"AMALI_STAGE": 1, "AMALI_JAWATAN": r["jaw"]}
+                    if r["jn"] in ("KP", "TKP", "PK"):
+                        b["AMALI_PUSAT"] = r["pusat"]
+                    ok += 1 if _kemas(r, b) else 0
+                _semula()
+                al._flash("success", f"✅ {ok} petugas disemak.")
+                st.rerun()
+
+    with t2:
+        st.markdown("##### 🗑️ Keluarkan petugas daripada Amali")
+        boleh = [r for r in rows if r["layak"] and r["stage"] in (-1, 1)]
+        if not boleh:
+            st.info("Tiada petugas yang boleh dikeluarkan.")
+        else:
+            kel = _skop_pilih(boleh, info, "kel")
+            if st.button(f"🗑️ Keluarkan {len(kel)} petugas", disabled=not kel, key="am_kel_btn"):
+                ok = sum(1 for r in kel if _kemas(r, {"AMALI_KECUAL": True, "AMALI_STAGE": "", "AMALI_PUSAT": "" if r["jn"] in ("PKS", "PMP", "PM") else r["pusat"]}))
+                _semula()
+                al._flash("success", f"🗑️ {ok} petugas dikeluarkan. Ia boleh dipulihkan atau digantikan.")
+                st.rerun()
+        st.markdown("##### ➕ Ganti / tambah petugas")
+        st.caption("Pilih jawatan dan pusat Amali, kemudian pilih petugas. Untuk KP / TKP / Penyelia Kawasan, pilih daripada petugas SPM jawatan sama yang belum bertugas di pusat Amali.")
+        jn_pilih = st.radio("Jawatan", ["KP", "TKP", "PK", "PKS", "PMP", "PM"], horizontal=True, key="am_gt_jn",
+                            format_func=lambda x: {"KP": "Ketua Pengawas", "TKP": "Timbalan KP", "PK": "Penyelia Kawasan", "PKS": "PKS", "PMP": "PMP", "PM": "PM"}[x])
+        pusat_t = st.selectbox("Pusat Amali / Bilik Kebal", sorted(ams), format_func=lambda p: f"{p} - {info.get(p, {}).get('nama', '')[:35]}", key="am_gt_pusat")
+        pool = [r for r in rows if r["jn"] == jn_pilih and not r["layak"]]
+        if jn_pilih in ("KP", "TKP"):
+            pool = [r for r in pool if r["spm_rank"] >= 0]
+        if jn_pilih == "PK":
+            pool = [r for r in pool if r["pusat"]]
+        cari = st.text_input("🔍 Cari nama / sekolah", key="am_gt_cari")
+        if cari.strip():
+            q = cari.strip().lower()
+            pool = [r for r in pool if q in r["nama"].lower() or q in (r["nama_sek"] or "").lower()]
+        pool = sorted(pool, key=lambda r: (r["nama_sek"] or r["sek"], r["nama"]))
+        st.caption(f"{len(pool)} petugas boleh dipilih")
+        if pool:
+            df = pd.DataFrame([{"NAMA": r["nama"], "SEKOLAH ASAL": r["nama_sek"] or r["sek"], "NO TELEFON": r["tel"], "PUSAT/BK SPM": r["pusat"],
+                                "STATUS": "Dikeluarkan" if r["kecuali"] else ""} for r in pool])
+            ev = st.dataframe(df, use_container_width=True, hide_index=True, height=min(380, 60 + 35 * len(df)), on_select="rerun",
+                              selection_mode="multi-row", key=f"am_gt_tbl_{jn_pilih}_{len(pool)}")
+            sel = [pool[i] for i in (ev.selection.rows if ev and ev.selection else []) if i < len(pool)]
+            if st.button(f"✅ Tambah {len(sel)} petugas ke {pusat_t}", type="primary", disabled=not sel, key="am_gt_ok"):
+                ok = 0
+                for r in sel:
+                    b = {"AMALI_KECUAL": False, "AMALI_STAGE": ""}
+                    if jn_pilih == "PK":
+                        b["AMALI_PAKSA"] = True
+                        b["AMALI_PUSAT"] = r["pusat"]
+                    else:
+                        b["AMALI_PUSAT"] = pusat_t
+                    ok += 1 if _kemas(r, b) else 0
+                _semula()
+                al._flash("success", f"✅ {ok} petugas ditambah. Semak semula di tab Semak.")
+                st.rerun()
+
+    with t3:
+        kel = [r for r in rows if r["kecuali"]]
+        if kel:
+            st.markdown("##### Dikeluarkan daripada Amali")
+            sel = _skop_pilih([dict(r, layak=True) for r in kel], info, "pulih")
+            if st.button(f"↩️ Pulihkan {len(sel)} petugas", disabled=not sel, key="am_pulih"):
+                ok = sum(1 for r in sel if _kemas(r, {"AMALI_KECUAL": False, "AMALI_STAGE": ""}))
+                _semula()
+                al._flash("success", f"↩️ {ok} petugas dipulihkan.")
+                st.rerun()
+        if sudah:
+            st.markdown("##### Telah disemak (boleh diundur)")
+            sel = _skop_pilih(sudah, info, "undur_semak")
+            if st.button(f"↩️ Undur {len(sel)} ke belum disemak", disabled=not sel, key="am_undur_sm"):
+                ok = sum(1 for r in sel if _kemas(r, {"AMALI_STAGE": ""}))
+                _semula()
+                al._flash("success", f"↩️ {ok} petugas diundur.")
+                st.rerun()
+        if not kel and not sudah:
+            st.info("Tiada petugas dikeluarkan atau disemak.")
+
+
+# ---------------------------------------------------------------- 5. Lantik Petugas
+_TAHAP = {"lantik": (1, 2, "Lantik Petugas", "👤", "Petugas yang telah disemak. Lantik untuk meneruskan ke Jana Surat.")}
 
 
 def render_tahap(kod_ppd, kunci):
@@ -438,8 +591,8 @@ def render_tahap(kod_ppd, kunci):
     _, rows = muat_semua(kod_ppd, ams)
     _bar(rows)
     st.caption(nota)
-    if dari > 0 and not any(r["stage"] >= dari for r in rows):
-        st.warning(f"Belum ada petugas di peringkat sebelumnya. Selesaikan dahulu langkah sebelum **{tajuk}**.")
+    if not any(r["layak"] and r["stage"] >= dari for r in rows):
+        st.warning(f"Belum ada petugas yang disemak. Selesaikan **Semak Petugas** dahulu sebelum **{tajuk}**.")
     pool = [r for r in rows if r["layak"] and r["stage"] == dari]
     if not pool:
         st.success("✅ Tiada petugas menunggu di peringkat ini.")
@@ -483,12 +636,12 @@ def render_jana(kod_ppd):
     raw, rows = muat_semua(kod_ppd, ams)
     info = al.pusat_info(kod_ppd)
     _bar(rows)
-    menunggu = [r for r in rows if r["layak"] and r["stage"] == 3]
+    menunggu = [r for r in rows if r["layak"] and r["stage"] == 2]
     if not menunggu:
         if any(r["stage"] >= 4 for r in rows):
-            st.success("✅ Semua petugas yang telah disemak sudah dijana suratnya. Pergi ke **Cetak Surat** / **Hantar ke Sekolah**.")
+            st.success("✅ Semua petugas yang dilantik sudah dijana suratnya. Pergi ke **Cetak Surat** / **Hantar ke Sekolah**.")
         else:
-            st.warning("Belum ada petugas yang telah disemak. Selesaikan **Sahkan → Lantik → Semak** dahulu.")
+            st.warning("Belum ada petugas yang dilantik. Selesaikan **Semak Petugas → Lantik Petugas** dahulu.")
         return
     jaw = st.selectbox("Pilih Jawatan Surat", ["(semua jawatan)"] + [j for j in JAWATAN_AMALI if any(r["jaw"] == j for r in menunggu)],
                        key="am_jana_jaw", format_func=lambda j: j if j.startswith("(") else f"{j} ({sum(1 for r in menunggu if r['jaw'] == j)})")
@@ -611,9 +764,9 @@ def render_hantar(kod_ppd):
         with st.expander("🗑️ Padam surat dijana (untuk jana semula)"):
             sel = _skop_pilih(tunggu, info, "padam")
             if st.button(f"🗑️ Padam {len(sel)} surat", disabled=not sel, key="am_pd_btn"):
-                ok = sum(1 for r in sel if _kemas(r, {"AMALI_STAGE": 3, "AMALI_NO": "", "AMALI_TARIKH": ""}))
+                ok = sum(1 for r in sel if _kemas(r, {"AMALI_STAGE": 2, "AMALI_NO": "", "AMALI_TARIKH": ""}))
                 _semula()
-                al._flash("success", f"🗑️ {ok} surat dipadam; kembali ke peringkat Disemak.")
+                al._flash("success", f"🗑️ {ok} surat dipadam; kembali ke peringkat Dilantik.")
                 st.rerun()
 
 
@@ -622,8 +775,12 @@ def render_menu(kod_ppd, fly_cur):
     f = fly_cur or "pusat"
     if f == "pusat":
         render_pusat(kod_ppd)
+    elif f == "petugas":
+        render_petugas(kod_ppd)
     elif f == "tempat":
         render_penempatan(kod_ppd)
+    elif f == "semak":
+        render_semak(kod_ppd)
     elif f in _TAHAP:
         render_tahap(kod_ppd, f)
     elif f == "jana":

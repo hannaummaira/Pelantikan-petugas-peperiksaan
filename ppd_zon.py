@@ -7,7 +7,7 @@ Peraturan:
   2. Hanya guru dari sekolah dalam zon boleh ditempatkan; hanya di pusat yang bertapak di sekolah dalam zon yang sama.
   3. Guru TIDAK boleh ditempatkan di sekolah asalnya sendiri.
   4. Pusingan: calon diagih bergilir antara sekolah asal (round-robin) dan dihantar ke pusat zon yang paling kurang diisi.
-  5. Peraturan sedia ada dikekalkan: ikut keperluan petugas pusat, 1 KP + 1 TKP setiap pusat, maksimum 3 guru sekolah yang sama setiap pusat.
+  5. Peraturan sedia ada dikekalkan: ikut keperluan petugas pusat, 1 KP + 1 TKP setiap pusat, maksimum guru sekolah yang sama setiap pusat (tetapan PPD, lalai 3).
 
 Zon disimpan dalam jadual Supabase `zon_bilik_kebal` (lihat ZON_SQL). Jika jadual belum wujud, zon disimpan sementara dalam sesi.
 Penempatan disimpan seperti Jana sedia ada: cadangan_sup.kod_pusat = no pusat, status = "DILANTIK PPD".
@@ -20,6 +20,7 @@ import spm_core as core
 from spm_core import get_cadangan_df, get_pusat_df, supa
 import ppd_cadangan as pc
 from ui_theme import esc
+from tetapan_ppd import max_per_sekolah
 
 ZON_TABLE = "zon_bilik_kebal"
 MAX_SEK_SAMA = 3
@@ -34,6 +35,11 @@ alter table zon_bilik_kebal disable row level security;"""
 
 
 # ------------------------------------------------------------------ jawatan
+def _perlu_manual(d, jk, core):
+    """PERLU manual yang diedit PPD di Dashboard (data["PERLU_PPD"]); jika tiada guna KELAS + 9."""
+    return core.kira_petugas_dari_kelas(jk)   # sentiasa KELAS + 9
+
+
 def kelas_jawatan(j):
     """KP / TKP / PENGAWAS (jawatan auto). Jawatan khas & penyelia = None (kekal penempatan manual)."""
     j = str(j or "").upper()
@@ -157,19 +163,12 @@ def load_pusat(kod_ppd):
         if not no or not no.startswith(str(kod_ppd).upper()):
             continue
         tuan = str(r.get("kod_sekolah_tuan_rumah") or r.get("kod_sekolah") or d.get("KOD_SEKOLAH") or d.get("KOD SEKOLAH") or "").upper().strip()
-        try:
-            jc = int(float(str(r.get("jumlah_calon") or d.get("JUMLAH_CALON") or 0)))
-        except Exception:
-            jc = 0
-        try:
-            jk = int(float(str(r.get("jumlah_kelas") or d.get("JUMLAH_KELAS") or 0)))
-        except Exception:
-            jk = 0
-        if jk == 0:
-            jk = core.kira_kelas_dari_calon(jc)
+        from kuota_pusat import kuota_pusat
+        _q = kuota_pusat(r)
+        jc, jk = _q["calon"], _q["kelas"]
         pk = str(r.get("poskod") or d.get("POSKOD") or d.get("POSKOD_PUSAT") or "").strip() or spk.get(tuan, "")
         out[no] = {"NO": no, "NAMA": str(r.get("nama_pusat") or d.get("NAMA_PUSAT") or "").strip(), "KOD_TUAN": tuan,
-                   "KELAS": jk, "CALON": jc, "PETUGAS": core.kira_petugas_dari_kelas(jk), "POSKOD": pk}
+                   "KELAS": jk, "CALON": jc, "PETUGAS": _perlu_manual(d, jk, core), "POSKOD": pk}
     return out
 
 
@@ -195,7 +194,7 @@ def load_calon(kod_ppd, inc_unrev=False):
 
 
 # ------------------------------------------------------------------ enjin penempatan zon (fungsi tulen - boleh diuji)
-def jana_zon(calon, pusat, zone, placed=None, kaedah="seimbang", nama_sek=None):
+def jana_zon(calon, pusat, zone, placed=None, kaedah="seimbang", nama_sek=None, maks=None):
     """
     calon : [{id, IC, NAMA, KOD_SEK, JAWATAN, KELAS, POSKOD}]
     pusat : {no: {NAMA, KOD_TUAN, PETUGAS, POSKOD}}  - sudah ditapis: hanya pusat bertapak di sekolah dalam zon
@@ -222,7 +221,7 @@ def jana_zon(calon, pusat, zone, placed=None, kaedah="seimbang", nama_sek=None):
             return False
         if s["total"] >= p["PETUGAS"]:
             return False
-        if s["asal"].get(c["KOD_SEK"], 0) >= MAX_SEK_SAMA:
+        if s["asal"].get(c["KOD_SEK"], 0) >= (MAX_SEK_SAMA if maks is None else int(maks)):
             return False
         if c["KELAS"] in ("KP", "TKP") and s[c["KELAS"]] >= 1:
             return False
@@ -448,7 +447,7 @@ def _view_jana(kod_ppd, db_ok):
                       format_func=lambda k: "🔄 Seimbang (pusingan antara sekolah, isi pusat paling kurang dahulu)" if k == "seimbang" else "📮 Terdekat (ikut poskod)")
     rkey = f"zon_res_{bk}"
     if st.button(f"🚀 Jana Penempatan Zon {bk}", type="primary", key="zon_jana", use_container_width=True, disabled=not layak):
-        asg, unp, state = jana_zon(layak, pusat, zone, placed, kaedah, smap)
+        asg, unp, state = jana_zon(layak, pusat, zone, placed, kaedah, smap, maks=max_per_sekolah(kod_ppd))
         st.session_state[rkey] = {"asg": asg, "unp": unp, "state": state}
     res = st.session_state.get(rkey)
     if not res:

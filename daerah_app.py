@@ -6,6 +6,7 @@ Contoh: app_BG.py -> PPD Gombak: hanya membaca data Gombak dari Supabase.
   - PPD  : baca cadangan_sup (daerah sendiri)
 """
 import streamlit as st
+from tahun_sistem import tahun_semasa
 import pandas as pd
 import spm_core as core
 import ui_theme as ui
@@ -13,6 +14,11 @@ from spm_core import KOD_DAERAH, PPD_MAP
 from ui_theme import esc
 
 PER_PAGE = 30
+
+
+def master_ok():
+    """Kata laluan induk ('a', a-j) dibenarkan kecuali DISABLE_MASTER_PASSWORD = true dalam secrets."""
+    return str(core._secret("DISABLE_MASTER_PASSWORD", "")).strip().lower() not in ("1", "true", "yes")
 
 
 # ------------------------------------------------------------------ data landing
@@ -51,20 +57,32 @@ def load_sekolah_daerah(kod_ppd):
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def load_sekolah_selesai(kod_ppd):
-    """Sekolah yang cadangannya sudah dihantar ke PPD (baca cadangan_sup daerah ini sahaja)."""
-    done = set()
+def load_status_sekolah(kod_ppd):
+    """{kod_sekolah: {"perlu": kuota calon wajib (kelas+12 bagi pusat sekolah itu), "hantar": bil cadangan sudah dihantar}}.
+    Kuota ikut kuota_pusat (termasuk suntingan PPD di Selenggara Pusat)."""
+    from kuota_pusat import kuota_ikut_sekolah
+    from sup_warna import sudah_hantar
+    out = {}
+    try:
+        pusat = pd.DataFrame(core.supa.table("pusat_master").select("*").limit(3000).execute().data or [])
+        for ks, v in kuota_ikut_sekolah(pusat).items():
+            out[ks] = {"perlu": v["perlu"], "hantar": 0}
+    except Exception:
+        pass
     try:
         res = core.supa.table("cadangan_sup").select("kod_sekolah,status").limit(10000).execute()
         for r in res.data or []:
-            s = str(r.get("status") or "").upper()
-            if any(x in s for x in ("HANTAR", "LULUS", "SAH", "JANA", "TEMPAT")):
-                ks = str(r.get("kod_sekolah") or "").upper().strip()
-                if ks:
-                    done.add(ks)
+            ks = str(r.get("kod_sekolah") or "").upper().strip()
+            if ks and sudah_hantar(r.get("status")):
+                out.setdefault(ks, {"perlu": 0, "hantar": 0})["hantar"] += 1
     except Exception:
         pass
-    return done
+    return out
+
+
+def sekolah_selesai(status):
+    """Selesai = cadangan dihantar mencukupi kuota. Sekolah tanpa kuota (bukan tuan rumah pusat): selesai jika ada yang dihantar."""
+    return {k for k, v in status.items() if (v["perlu"] > 0 and v["hantar"] >= v["perlu"]) or (v["perlu"] == 0 and v["hantar"] > 0)}
 
 
 # ------------------------------------------------------------------ dialog log masuk
@@ -76,8 +94,8 @@ def dlg_sup(kod, nama, sid, kod_ppd):
     c1, c2 = st.columns(2)
     with c1:
         if st.button("Masuk", type="primary", use_container_width=True, key="btn_sup_masuk"):
-            valid = [str(sid), f"12345{sid}", "12345", "a"]
-            if pwd.strip() in valid or pwd.strip().lower() == "a":
+            valid = [str(sid), f"12345{sid}", "12345"] + (["a"] if master_ok() else [])
+            if pwd.strip() in valid or (master_ok() and pwd.strip().lower() == "a"):
                 info = core.get_sekolah(kod)
                 info.update({"kod_sekolah": kod, "nama_sekolah": nama, "kod_ppd": kod_ppd})
                 st.session_state.update({"role": "SUP", "kod": kod, "info": info, "sup_id": sid})
@@ -97,7 +115,9 @@ def dlg_ppd(kod_ppd):
     c1, c2 = st.columns(2)
     with c1:
         if st.button("Masuk PPD", type="primary", use_container_width=True, key="btn_ppd_masuk"):
-            valid = [chr(96 + ppd_id), str(ppd_id), f"12345{ppd_id}", kod_ppd.lower(), "a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
+            valid = [str(ppd_id), f"12345{ppd_id}", kod_ppd.lower()]
+            if master_ok():
+                valid += [chr(96 + ppd_id), "a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
             if pwd.strip().lower() in [v.lower() for v in valid]:
                 st.session_state.update({"role": "PPD", "kod": kod_ppd, "ppd_id": ppd_id})
                 st.rerun()
@@ -112,16 +132,21 @@ def dlg_ppd(kod_ppd):
 def render_landing(kod_ppd):
     nama_ppd = PPD_MAP.get(kod_ppd, kod_ppd)
     df = load_sekolah_daerah(kod_ppd)
-    selesai = load_sekolah_selesai(kod_ppd)
+    status_sek = load_status_sekolah(kod_ppd)
+    selesai = sekolah_selesai(status_sek)
     total = len(df)
     n_ok = int(df["KOD_SEKOLAH"].isin(selesai).sum()) if total else 0
     n_belum = total - n_ok
 
+    if st.session_state.get("portal"):
+        if st.button("⬅ Pilih Daerah / JPN Lain", key="back_home"):
+            st.session_state.clear()
+            st.rerun()
     st.markdown(f"""
     <div class="land-top">
       <div style="display:flex;align-items:center"><span class="logo">PPD</span>
         <div><div class="n">PPD {esc(nama_ppd.upper())}</div><div class="s">KEMENTERIAN PENDIDIKAN MALAYSIA</div></div></div>
-      <div class="r">Pelantikan Petugas SPM Selangor 2026 &nbsp;•&nbsp; JPN Selangor</div>
+      <div class="r">Pelantikan Petugas SPM Selangor {tahun_semasa()} &nbsp;•&nbsp; JPN Selangor</div>
     </div>
     <div class="land-head">
       <div style="max-width:640px">
@@ -131,8 +156,8 @@ def render_landing(kod_ppd):
       </div>
       <div class="land-stats">
         <div class="land-stat"><div class="l">Jumlah</div><div class="v">{total}</div><div class="s">sekolah</div></div>
-        <div class="land-stat ok"><div class="l">Selesai</div><div class="v">{n_ok}</div><div class="s">cadangan dihantar</div></div>
-        <div class="land-stat warn"><div class="l">Belum</div><div class="v">{n_belum}</div><div class="s">perlu tindakan</div></div>
+        <div class="land-stat ok"><div class="l">Selesai</div><div class="v">{n_ok}</div><div class="s">kuota dipenuhi</div></div>
+        <div class="land-stat warn"><div class="l">Belum Lengkap</div><div class="v">{n_belum}</div><div class="s">kuota belum cukup</div></div>
       </div>
     </div>""", unsafe_allow_html=True)
 
@@ -167,6 +192,9 @@ def render_landing(kod_ppd):
     for i, (_, r) in enumerate(chunk.iterrows()):
         kod, nama, sid = r["KOD_SEKOLAH"], r["NAMA_SEKOLAH"], int(r["ID"])
         ok = kod in selesai
+        _sv = status_sek.get(kod, {"perlu": 0, "hantar": 0})
+        _kuota_txt = (f"📋 Dihantar {_sv['hantar']} / {_sv['perlu']} orang" if _sv["perlu"] > 0
+                      else (f"📋 Dihantar {_sv['hantar']} orang" if _sv["hantar"] else "📋 Belum ada cadangan dihantar"))
         with cols[i % 3]:
             with st.container(border=True):
                 st.markdown(f"""
@@ -177,7 +205,7 @@ def render_landing(kod_ppd):
                     <span class="badge {'ok' if ok else 'warn'}"><i></i>{'Selesai' if ok else 'Belum Lengkap'}</span>
                   </div>
                   <div class="sch-name">{esc(nama)}</div>
-                  <div class="sch-meta">📍 Daerah {esc(nama_ppd)} &nbsp;•&nbsp; 👤 ID SUP: {sid}</div>
+                  <div class="sch-meta">{esc(_kuota_txt)} &nbsp;•&nbsp; 👤 ID SUP: {sid}</div>
                 </div>""", unsafe_allow_html=True)
                 if st.button("Masuk sebagai SUP →", key=f"sup_{kod}", use_container_width=True, type="primary"):
                     dlg_sup(kod, nama, sid, kod_ppd)
@@ -195,11 +223,12 @@ def render_landing(kod_ppd):
 
 
 # ------------------------------------------------------------------ runner
-def run_daerah(kod_ppd):
+def run_daerah(kod_ppd, chrome=True):
     kod_ppd = kod_ppd.upper()
     core.set_scope(kod_ppd)
-    core.apply_global_ui()
-    ui.apply_theme()
+    if chrome:
+        core.apply_global_ui()
+        ui.apply_theme()
     role = st.session_state.get("role")
     if role == "PPD" and st.session_state.get("kod") != kod_ppd:
         st.session_state.clear()
@@ -215,4 +244,5 @@ def run_daerah(kod_ppd):
         role_ppd.render_ppd()
     else:
         render_landing(kod_ppd)
-    core.render_footer()
+    if chrome:
+        core.render_footer()

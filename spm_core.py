@@ -24,6 +24,7 @@ BASE: app_32.py LOCKED VERSION OK
 """
 
 import streamlit as st
+from tahun_sistem import tahun_semasa, tempoh_penyelia
 import pandas as pd
 from supabase import create_client
 from io import BytesIO
@@ -217,7 +218,7 @@ def jpn_kad_pusat(no_pusat_list_str, total_kelas, total_petugas, total_perlu, ko
     import html as _h
     return (
         '<div class="sup-box">'
-        f'<div class="sup-card-h"><span class="t">KEPERLUAN PENGAWAS - {_h.escape(str(kod_sekolah))}, JPN SELANGOR 2026</span>'
+        f'<div class="sup-card-h"><span class="t">KEPERLUAN PENGAWAS - {_h.escape(str(kod_sekolah))}, JPN SELANGOR {tahun_semasa()}</span>'
         f'<span class="sup-chip">NO PUSAT SEKOLAH ANDA: {_h.escape(str(no_pusat_list_str))}</span></div>'
         '<div class="sup-tiles">'
         f'<div class="sup-tile"><div class="l">JUMLAH KELAS</div><div class="n">{total_kelas}</div><div class="s">Bilik peperiksaan</div></div>'
@@ -268,10 +269,10 @@ def show_hero_header():
     st.markdown(f"""
     <div style="background:linear-gradient(180deg,#ffffff 0%,#eef4ff 100%);border:1px solid #d6e2f5;border-radius:24px;padding:28px 20px 22px 20px;text-align:center;box-shadow:0 10px 30px rgba(13,71,161,0.08);margin-bottom:22px;">
         {get_jata_img_html(88)}
-        <div style="font-family:Poppins,Inter,sans-serif;font-weight:800;font-size:1.45rem;color:#0d47a1;line-height:1.3;">SISTEM PELANTIKAN PETUGAS<br/>PEPERIKSAAN SPM TAHUN 2026</div>
+        <div style="font-family:Poppins,Inter,sans-serif;font-weight:800;font-size:1.45rem;color:#0d47a1;line-height:1.3;">SISTEM PELANTIKAN PETUGAS<br/>PEPERIKSAAN SPM TAHUN {tahun_semasa()}</div>
         <div style="width:88px;height:4px;background:linear-gradient(90deg,#0d47a1,#1565c0);margin:14px auto 0 auto;border-radius:999px;"></div>
         <div style="font-weight:700;color:#0d47a1;font-size:0.98rem;margin-top:8px;">Jabatan Pendidikan Negeri Selangor</div>
-        <div style="color:#0d47a1;font-size:0.86rem;margin-top:10px;max-width:620px;margin-left:auto;margin-right:auto;line-height:1.5;">Selamat Datang ke Portal Pelantikan — Sila pilih kategori petugas untuk log masuk. Sistem ini untuk urusan pelantikan petugas peperiksaan SPM Selangor 2026.</div>
+        <div style="color:#0d47a1;font-size:0.86rem;margin-top:10px;max-width:620px;margin-left:auto;margin-right:auto;line-height:1.5;">Selamat Datang ke Portal Pelantikan — Sila pilih kategori petugas untuk log masuk. Sistem ini untuk urusan pelantikan petugas peperiksaan SPM Selangor {tahun_semasa()}.</div>
         <div style="margin-top:16px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
             <span style="background:#fff;border:1px solid #dbe6f8;border-radius:999px;padding:6px 14px;font-weight:700;font-size:0.82rem;color:#0d47a1;">🏫 369 Sekolah</span>
             <span style="background:#fff;border:1px solid #dbe6f8;border-radius:999px;padding:6px 14px;font-weight:700;font-size:0.82rem;color:#0d47a1;">📍 506 Pusat</span>
@@ -293,7 +294,7 @@ def get_jpn_templates_one():
     try:
         _supa = get_supabase()
         res = _supa.table("surat_templates_jpn").select("jawatan, template_html").execute()
-        return {r["jawatan"].upper(): r["template_html"] for r in res.data} if res.data else {}
+        return {r["jawatan"].upper(): r["template_html"] for r in res.data if not str(r.get("jawatan", "")).startswith("__ASET_")} if res.data else {}
     except:
         return {}
 
@@ -354,6 +355,8 @@ def render_jpn_template_html(jawatan, nama, ic, sek_asal, nama_sek_asal, pusat, 
             "PPD": kod_ppd, "KOD_PPD": kod_ppd,
             "PPD_NAME": ppd_name, "NAMA_PPD": ppd_name,
             "TARIKH": tarikh,
+            "TAHUN": str(tahun_semasa()),
+            "LOGO": _img_uri("logo"), "TANDATANGAN": _img_uri("tandatangan"), "TANDA_TANGAN": _img_uri("tandatangan"),
         }
         html = tmpl
         for k, v in replacements.items():
@@ -361,9 +364,11 @@ def render_jpn_template_html(jawatan, nama, ic, sek_asal, nama_sek_asal, pusat, 
             esc = re.escape(k)
             html = re.sub(r"\{\{\s*" + esc + r"\s*\}\}", lambda m, v=v: v, html, flags=re.IGNORECASE)
             html = re.sub(r"\[" + esc + r"\]", lambda m, v=v: v, html, flags=re.IGNORECASE)
-        return html
+        _thn = str(tahun_semasa())
+        if _thn != "2026":  # templat lama yang disimpan dengan teks 2026 -> ikut tahun semasa
+            html = html.replace("2026", _thn)
+        return _perbaiki_img_src(html)
     except Exception as e:
-        _log.debug(f"render JPN error: {e}")
         return None
 
 
@@ -392,21 +397,50 @@ def html_to_pdf_bytes(html):
         buf = io.BytesIO()
         res = pisa.CreatePDF(src=_bungkus_html_surat(html), dest=buf, encoding="utf-8")
         if res.err:
+            _surat_err("xhtml2pdf (templat JPN)", f"{res.err} ralat semasa menjana PDF dari templat")
             return None
         return buf.getvalue()
     except Exception as e:
-        _log.debug(f"html_to_pdf error: {e}")
+        _surat_err("xhtml2pdf (templat JPN)", e)
         return None
 
 # ---- v39: skop daerah ----
 from scoped_db import ScopedSupabase
-SCOPE = {"ppd": None}           # None = JPN (semua daerah); "BG" = Gombak sahaja
+class _SessionScope:
+    """Skop daerah PER SESI PENGGUNA (satu URL dikongsi ramai pengguna serentak).
+    SCOPE["ppd"] -> None = JPN (semua daerah); "BG" = Gombak sahaja. Disimpan dalam st.session_state."""
+    def __getitem__(self, key):
+        try:
+            return st.session_state.get("_scope_ppd")
+        except Exception:
+            return None
+    def __setitem__(self, key, value):
+        st.session_state["_scope_ppd"] = value
+    def get(self, key, default=None):
+        return self[key] or default
+
+SCOPE = _SessionScope()
 def set_scope(kod_ppd):
     SCOPE["ppd"] = (str(kod_ppd).strip().upper() or None) if kod_ppd else None
 _RAW = get_supabase()
 supa = ScopedSupabase(_RAW, lambda: SCOPE["ppd"])
 def scope_label():
     return PPD_MAP.get(SCOPE["ppd"], SCOPE["ppd"]) if SCOPE["ppd"] else "Selangor"
+
+def scope_cache(**cache_kw):
+    """Seperti st.cache_data tetapi KUNCI CACHE merangkumi skop daerah sesi semasa.
+    Tanpa ini, data satu daerah yang di-cache boleh dipaparkan kepada pengguna daerah lain."""
+    import functools
+    def deco(fn):
+        @st.cache_data(**cache_kw)
+        def _inner(scope_key, *a, **k):          # scope_key (tanpa garis bawah) = sebahagian kunci cache
+            return fn(*a, **k)
+        @functools.wraps(fn)
+        def _outer(*a, **k):
+            return _inner(SCOPE["ppd"] or "", *a, **k)
+        _outer.clear = _inner.clear
+        return _outer
+    return deco
 
 # Clear cache helper - untuk refresh button cepat
 def clear_all_cache():
@@ -421,14 +455,8 @@ PPD_MAP = {
     "BG": "Gombak", "BH": "Petaling Perdana", "BJ": "Sepang", "BK": "Petaling Utama"
 }
 
-# ===== PANDUAN PASSWORD UNTUK TESTING 300 USER =====
-ENABLE_TESTING_GUIDE = False
 MAX_PDF_KOLEKTIF = 150
 MAX_ZIP_FILES = 200
-
-def show_testing_password_guide(df_sekolah_all):
-    return
-
 
 # ===== HELPER: WARNA HIJAU UNTUK GURU SUDAH HANTAR KE PPD =====
 def style_nama_hijau_hantar(df_input):
@@ -867,7 +895,7 @@ def generate_surat_html(nama, ic, jawatan, sek_asal, nama_sek_asal, pusat, nama_
     else:
         display_pusat = pusat
 
-    html = '<html><head><meta charset="UTF-8"><title>Surat Lantikan SPM 2026</title>'
+    html = f'<html><head><meta charset="UTF-8"><title>Surat Lantikan SPM {tahun_semasa()}</title>'
     html += '<style>body{font-family:Times New Roman,serif;margin:40px;color:#000;}'
     html += '.surat{border:2px solid #000;padding:30px;margin-bottom:30px;page-break-after:always;background:white;}'
     html += '.header{text-align:center;border-bottom:3px double #000;padding-bottom:15px;margin-bottom:20px;}'
@@ -884,9 +912,9 @@ def generate_surat_html(nama, ic, jawatan, sek_asal, nama_sek_asal, pusat, nama_
     html += '<div class="kandungan">'
     html += f'<p>Tarikh: {tarikh}</p>'
     html += '<p><strong>Tuan/Puan,</strong></p>'
-    html += f'<p><strong>PELANTIKAN SEBAGAI {jawatan.upper()} PEPERIKSAAN SPM TAHUN 2026</strong></p>'
+    html += f'<p><strong>PELANTIKAN SEBAGAI {jawatan.upper()} PEPERIKSAAN SPM TAHUN {tahun_semasa()}</strong></p>'
     html += '<p>Dengan hormatnya saya merujuk kepada perkara di atas.</p>'
-    html += '<p>2. Sukacita dimaklumkan bahawa tuan/puan telah dilantik sebagai petugas peperiksaan SPM 2026 seperti butiran berikut:</p>'
+    html += f'<p>2. Sukacita dimaklumkan bahawa tuan/puan telah dilantik sebagai petugas peperiksaan SPM {tahun_semasa()} seperti butiran berikut:</p>'
     html += '<table class="info">'
     html += f'<tr><td>Nama</td><td>: {nama}</td></tr>'
     html += f'<tr><td>No. IC</td><td>: {ic}</td></tr>'
@@ -896,7 +924,7 @@ def generate_surat_html(nama, ic, jawatan, sek_asal, nama_sek_asal, pusat, nama_
     html += f'<tr><td>No Surat Lantikan</td><td>: {no_surat}</td></tr>'
     html += '</table>'
     html += '<p>3. Tuan/puan dikehendaki hadir bertugas di pusat peperiksaan yang telah ditetapkan mengikut jadual yang akan dimaklumkan kemudian.</p>'
-    html += '<p>4. Kerjasama dan komitmen tuan/puan dalam menjayakan peperiksaan SPM 2026 amatlah dihargai dan didahului dengan ucapan terima kasih.</p>'
+    html += f'<p>4. Kerjasama dan komitmen tuan/puan dalam menjayakan peperiksaan SPM {tahun_semasa()} amatlah dihargai dan didahului dengan ucapan terima kasih.</p>'
     html += '<p>Sekian.</p>'
     html += '<div class="footer"><p><strong>MALAYSIA MADANI</strong><br><strong>BERKHIDMAT UNTUK NEGARA</strong></p>'
     html += '<div class="tandatangan"><div><p>Yang benar,</p><br><br><br>'
@@ -969,7 +997,7 @@ def generate_surat_pdf_bytes(nama, ic, jawatan, sek_asal, nama_sek_asal, pusat, 
         story.append(Paragraph("JABATAN PENDIDIKAN NEGERI SELANGOR", style_title))
         story.append(Paragraph(f"PEJABAT PENDIDIKAN DAERAH {ppd_name.upper() or kod_ppd}", style_heading))
         story.append(Spacer(1, 6))
-        story.append(Paragraph(f"<b>SURAT LANTIKAN PETUGAS PEPERIKSAAN SPM 2026</b>", style_heading))
+        story.append(Paragraph(f"<b>SURAT LANTIKAN PETUGAS PEPERIKSAAN SPM {tahun_semasa()}</b>", style_heading))
         story.append(Spacer(1, 8))
         story.append(Paragraph(f"<b>No Rujukan: {no_surat}</b>", style_normal))
         story.append(Paragraph(f"Tarikh: {tarikh}", style_normal))
@@ -980,8 +1008,8 @@ def generate_surat_pdf_bytes(nama, ic, jawatan, sek_asal, nama_sek_asal, pusat, 
         {jawatan}<br/>
         {display_sek_asal}<br/><br/>
         Tuan/Puan,<br/><br/>
-        <b>PELANTIKAN SEBAGAI {jawatan.upper()} PEPERIKSAAN SPM 2026</b><br/><br/>
-        Dengan hormatnya dimaklumkan bahawa tuan/puan telah dilantik sebagai <b>{jawatan}</b> bagi Peperiksaan SPM Tahun 2026.<br/><br/>
+        <b>PELANTIKAN SEBAGAI {jawatan.upper()} PEPERIKSAAN SPM {tahun_semasa()}</b><br/><br/>
+        Dengan hormatnya dimaklumkan bahawa tuan/puan telah dilantik sebagai <b>{jawatan}</b> bagi Peperiksaan SPM Tahun {tahun_semasa()}.<br/><br/>
         <b>Butiran Penempatan:</b><br/>
         - Sekolah Asal: {display_sek_asal}<br/>
         - Pusat Peperiksaan Ditugaskan: {display_pusat}<br/>
@@ -1025,7 +1053,7 @@ def generate_surat_pdf_bytes(nama, ic, jawatan, sek_asal, nama_sek_asal, pusat, 
             buffer = io.BytesIO()
             c = canvas.Canvas(buffer, pagesize=A4)
             c.setFont("Helvetica-Bold", 14)
-            c.drawString(50, 800, f"SURAT LANTIKAN SPM 2026 - {kod_ppd}")
+            c.drawString(50, 800, f"SURAT LANTIKAN SPM {tahun_semasa()} - {kod_ppd}")
             c.setFont("Helvetica", 10)
             y = 780
             lines = [
@@ -1038,7 +1066,7 @@ def generate_surat_pdf_bytes(nama, ic, jawatan, sek_asal, nama_sek_asal, pusat, 
                 f"Tarikh: {tarikh}",
                 f"PPD: {kod_ppd} - {ppd_name}",
                 "",
-                "Tuan/Puan telah dilantik sebagai petugas peperiksaan SPM 2026.",
+                f"Tuan/Puan telah dilantik sebagai petugas peperiksaan SPM {tahun_semasa()}.",
                 f"Sila lapor diri di pusat {pusat}.",
             ]
             for line in lines:
@@ -1119,7 +1147,7 @@ def generate_surat_kolektif_pdf_bytes(surat_list, kod_ppd, ppd_name, title="SURA
             <font size=8>
             No Surat: <b>{no_surat}</b> | Sekolah Asal: {sekolah_asal_full}<br/>
             Pusat: {pusat} - {nama_pusat} | Bilik Kebal: {bilik_kebal}<br/>
-            Tuan/Puan telah dilantik sebagai <b>{jawatan}</b> SPM 2026 di pusat {pusat}. Sila lapor diri mengikut arahan.<br/>
+            Tuan/Puan telah dilantik sebagai <b>{jawatan}</b> SPM {tahun_semasa()} di pusat {pusat}. Sila lapor diri mengikut arahan.<br/>
             </font>
             """
             story.append(Paragraph(isi, style_normal))
@@ -1139,7 +1167,6 @@ def generate_surat_kolektif_pdf_bytes(surat_list, kod_ppd, ppd_name, title="SURA
         buffer.close()
         return pdf_bytes
     except Exception as e:
-        _log.debug(f"Error kolektif: {e}")
         return None
 
 
@@ -1147,14 +1174,6 @@ def generate_surat_kolektif_pdf_bytes(surat_list, kod_ppd, ppd_name, title="SURA
 
 def generate_surat_penyelia_kawasan_html(nama, ic, sek_asal, nama_sek_asal, telefon, kod_bilik_kebal, nama_bilik_kebal, alamat_bilik_kebal, pusat_jagaan_list, no_surat, kod_ppd, ppd_name, tarikh):
     """Surat khas untuk Penyelia Kawasan yang ditempatkan ke Bilik Kebal"""
-    # V34: Ensure pusat_jagaan_list is not empty, fallback to kod_pusat if needed
-    if not pusat_jagaan_list:
-        try:
-            # Try from data JSON
-            if isinstance(data_dict, dict):
-                pusat_jagaan_list = data_dict.get("pusat_jagaan") or data_dict.get("pusat_jagaan_str","").split(",") if isinstance(data_dict.get("pusat_jagaan_str"), str) else []
-        except:
-            pass
     pusat_jagaan_str = ", ".join(pusat_jagaan_list) if isinstance(pusat_jagaan_list, list) else str(pusat_jagaan_list)
     pusat_jagaan_table = ""
     if isinstance(pusat_jagaan_list, list) and pusat_jagaan_list:
@@ -1163,7 +1182,7 @@ def generate_surat_penyelia_kawasan_html(nama, ic, sek_asal, nama_sek_asal, tele
     else:
         pusat_jagaan_table = f"<tr><td>1</td><td>{pusat_jagaan_str}</td></tr>"
 
-    html = '<html><head><meta charset="UTF-8"><title>Surat Lantikan Penyelia Kawasan SPM 2026</title>'
+    html = f'<html><head><meta charset="UTF-8"><title>Surat Lantikan Penyelia Kawasan SPM {tahun_semasa()}</title>'
     html += '<style>body{font-family:Times New Roman,serif;margin:40px;color:#000;}'
     html += '.surat{border:3px double #0d47a1;padding:30px;margin-bottom:30px;background:white;page-break-after:always;}'
     html += '.header{text-align:center;border-bottom:3px double #0d47a1;padding-bottom:15px;margin-bottom:20px;}'
@@ -1181,12 +1200,12 @@ def generate_surat_penyelia_kawasan_html(nama, ic, sek_asal, nama_sek_asal, tele
     html += '<div class="surat"><div class="header">'
     html += '<h2>JABATAN PENDIDIKAN NEGERI SELANGOR</h2>'
     html += f'<h3>PEJABAT PENDIDIKAN DAERAH {kod_ppd} - {ppd_name}</h3>'
-    html += '<h3 style="color:#0d47a1;">SURAT LANTIKAN PENYELIA KAWASAN SPM 2026</h3>'
+    html += f'<h3 style="color:#0d47a1;">SURAT LANTIKAN PENYELIA KAWASAN SPM {tahun_semasa()}</h3>'
     html += f'<p><strong>No Rujukan: {no_surat}</strong> | Tarikh: {tarikh}</p></div>'
     html += '<div class="kandungan">'
     html += '<p><strong>Tuan/Puan,</strong></p>'
-    html += '<p><strong>PELANTIKAN SEBAGAI PENYELIA KAWASAN PEPERIKSAAN SPM TAHUN 2026 - PENEMPATAN DI BILIK KEBAL</strong></p>'
-    html += '<p>Dengan hormatnya saya merujuk kepada perkara di atas dan sukacita dimaklumkan bahawa tuan/puan telah dilantik sebagai <strong>Penyelia Kawasan SPM 2026</strong> dengan butiran seperti berikut:</p>'
+    html += f'<p><strong>PELANTIKAN SEBAGAI PENYELIA KAWASAN PEPERIKSAAN SPM TAHUN {tahun_semasa()} - PENEMPATAN DI BILIK KEBAL</strong></p>'
+    html += f'<p>Dengan hormatnya saya merujuk kepada perkara di atas dan sukacita dimaklumkan bahawa tuan/puan telah dilantik sebagai <strong>Penyelia Kawasan SPM {tahun_semasa()}</strong> dengan butiran seperti berikut:</p>'
     html += '<table class="info">'
     html += f'<tr><td>Nama Penyelia Kawasan</td><td>{nama}</td></tr>'
     html += f'<tr><td>No. Kad Pengenalan</td><td>{ic}</td></tr>'
@@ -1220,7 +1239,7 @@ def generate_surat_penyelia_kawasan_html(nama, ic, sek_asal, nama_sek_asal, tele
     html += '</ul>'
 
     html += '<p>4. Tuan/puan dikehendaki hadir taklimat Penyelia Kawasan yang akan dimaklumkan kemudian oleh PPD.</p>'
-    html += '<p>5. Kerjasama, komitmen dan integriti tuan/puan dalam menjayakan peperiksaan SPM 2026 amatlah dihargai.</p>'
+    html += f'<p>5. Kerjasama, komitmen dan integriti tuan/puan dalam menjayakan peperiksaan SPM {tahun_semasa()} amatlah dihargai.</p>'
     html += '<p>Sekian, terima kasih.</p>'
 
     html += '<div class="footer"><p><strong>MALAYSIA MADANI</strong><br><strong>BERKHIDMAT UNTUK NEGARA</strong></p>'
@@ -1235,7 +1254,7 @@ def generate_surat_kolektif_html(guru_list, kod_ppd, ppd_name, tarikh, prefix):
     # guru_list is list of dicts with NAMA, IC, etc
     html = '<html><head><meta charset="UTF-8"><title>Surat Lantikan Kolektif</title>'
     html += '<style>body{font-family:Arial,sans-serif;margin:20px;} .surat{border:1px solid #ccc;padding:20px;margin:10px 0;} h2{text-align:center;}</style></head><body>'
-    html += f'<h2>SURAT LANTIKAN PETUGAS SPM 2026 - PPD {kod_ppd}</h2>'
+    html += f'<h2>SURAT LANTIKAN PETUGAS SPM {tahun_semasa()} - PPD {kod_ppd}</h2>'
     html += f'<p>Tarikh: {tarikh} | Jumlah: {len(guru_list)} guru</p><hr>'
     for g in guru_list:
         html += generate_surat_html(g["NAMA GURU"], g["IC"], g["JAWATAN"], g["SEKOLAH ASAL"], g["NAMA SEKOLAH ASAL"], g["PUSAT DITEMPATKAN"], g["NAMA PUSAT DITEMPATKAN"], g["NO SURAT"], kod_ppd, ppd_name, tarikh)
@@ -1268,7 +1287,7 @@ def get_sekolah(kod):
         except: continue
     return {"kod_sekolah": kod, "nama_sekolah": f"SEKOLAH {kod}", "kod_ppd": "BH", "ppd": "Petaling Perdana"}
 
-@st.cache_data(ttl=300, show_spinner=False)
+@scope_cache(ttl=300, show_spinner=False)
 def get_guru_df(kod_sekolah):
     try:
         res = None
@@ -1357,7 +1376,7 @@ def get_guru_df(kod_sekolah):
     except Exception:
         return pd.DataFrame()
 
-@st.cache_data(ttl=300, show_spinner=False)
+@scope_cache(ttl=300, show_spinner=False)
 def get_pusat_df():
     try:
         res = supa.table("pusat_master").select("*").limit(2000).execute()
@@ -1377,7 +1396,7 @@ def get_pusat_df():
         st.error(f"pusat_master error: {e}")
     return pd.DataFrame()
 
-@st.cache_data(ttl=120, show_spinner=False)
+@scope_cache(ttl=120, show_spinner=False)
 def get_cadangan_df(kod_ppd=None, kod_sekolah=None):
     try:
         # Fetch with larger limit and without strict eq first to avoid missing data due to case issues
@@ -1555,6 +1574,26 @@ def get_cadangan_df(kod_ppd=None, kod_sekolah=None):
                 df_norm = df_norm[df_norm['KOD_SEKOLAH_ASAL'].astype(str).str.upper() == kod_s_u]
             except:
                 pass
+
+        # Isi NAMA_SEKOLAH_ASAL daripada sekolah_master jika kosong atau hanya kod sekolah
+        try:
+            if df_norm is not None and len(df_norm) and "KOD_SEKOLAH_ASAL" in df_norm.columns:
+                _kod = df_norm["KOD_SEKOLAH_ASAL"].astype(str).str.upper().str.strip()
+                _nama = df_norm["NAMA_SEKOLAH_ASAL"].astype(str).str.strip() if "NAMA_SEKOLAH_ASAL" in df_norm.columns else _kod * 0
+                _perlu = (_nama == "") | (_nama.str.upper() == _kod) | _nama.str.lower().isin(["nan", "none", "null"])
+                if _perlu.any():
+                    _smap = {}
+                    for _s in (supa.table("sekolah_master").select("kod_sekolah,nama_sekolah").limit(5000).execute().data or []):
+                        _k = str(_s.get("kod_sekolah") or "").upper().strip()
+                        if _k:
+                            _smap[_k] = str(_s.get("nama_sekolah") or "").strip()
+                    _baru = _kod.map(lambda k: _smap.get(k, ""))
+                    _isi = _perlu & (_baru != "")
+                    df_norm = df_norm.copy()
+                    df_norm["NAMA_SEKOLAH_ASAL"] = _nama.where(~_isi, _baru.str.upper())
+                    df_norm["nama_sekolah_asal"] = _nama.where(~_isi, _baru)
+        except Exception:
+            pass
 
         return df_norm
     except Exception as e:
@@ -1800,17 +1839,17 @@ def generate_surat_html_FIXED(nama, ic, jawatan, sek_asal, nama_sek_asal, pusat,
         except:
             display_sek_asal = sek_asal
     display_pusat = f"{pusat} - {nama_pusat}" if nama_pusat and nama_pusat.upper() != pusat.upper() else pusat
-    html = '<html><head><meta charset="UTF-8"><title>Surat Lantikan SPM 2026</title>'
+    html = f'<html><head><meta charset="UTF-8"><title>Surat Lantikan SPM {tahun_semasa()}</title>'
     html += '<style>body{font-family:Times New Roman,serif;margin:40px;color:#000;}.surat{border:2px solid #000;padding:30px;margin-bottom:30px;page-break-after:always;background:white;}.header{text-align:center;border-bottom:3px double #000;padding-bottom:15px;margin-bottom:20px;}.kandungan{line-height:1.6;}table.info{width:100%;border-collapse:collapse;margin:15px 0;}table.info td{padding:5px 10px;}table.info td:first-child{width:180px;font-weight:bold;}.tandatangan{margin-top:60px;display:flex;justify-content:space-between;}</style></head><body>'
     html += '<div class="surat"><div class="header">'
     html += '<h2>JABATAN PENDIDIKAN NEGERI SELANGOR</h2>'
     html += f'<h3>PEJABAT PENDIDIKAN DAERAH {kod_ppd} - {ppd_name}</h3>'
     html += f'<p>No Surat: {no_surat}</p></div>'
     html += '<div class="kandungan">'
-    html += f'<p>Tarikh: {tarikh}</p><p><strong>Tuan/Puan,</strong></p><p><strong>PELANTIKAN SEBAGAI {jawatan.upper()} PEPERIKSAAN SPM TAHUN 2026</strong></p>'
-    html += '<p>Dengan hormatnya saya merujuk kepada perkara di atas.</p><p>2. Sukacita dimaklumkan bahawa tuan/puan telah dilantik sebagai petugas peperiksaan SPM 2026 seperti butiran berikut:</p><table class="info">'
+    html += f'<p>Tarikh: {tarikh}</p><p><strong>Tuan/Puan,</strong></p><p><strong>PELANTIKAN SEBAGAI {jawatan.upper()} PEPERIKSAAN SPM TAHUN {tahun_semasa()}</strong></p>'
+    html += f'<p>Dengan hormatnya saya merujuk kepada perkara di atas.</p><p>2. Sukacita dimaklumkan bahawa tuan/puan telah dilantik sebagai petugas peperiksaan SPM {tahun_semasa()} seperti butiran berikut:</p><table class="info">'
     html += f'<tr><td>Nama</td><td>: {nama}</td></tr><tr><td>No. IC</td><td>: {ic}</td></tr><tr><td>Jawatan</td><td>: {jawatan}</td></tr><tr><td>Sekolah Asal</td><td>: {display_sek_asal}</td></tr><tr><td>Pusat Ditugaskan</td><td>: {display_pusat}</td></tr><tr><td>No Surat Lantikan</td><td>: {no_surat}</td></tr></table>'
-    html += '<p>3. Tuan/puan dikehendaki hadir bertugas di pusat peperiksaan yang telah ditetapkan mengikut jadual yang akan dimaklumkan kemudian.</p><p>4. Kerjasama dan komitmen tuan/puan dalam menjayakan peperiksaan SPM 2026 amatlah dihargai dan didahului dengan ucapan terima kasih.</p><p>Sekian.</p>'
+    html += f'<p>3. Tuan/puan dikehendaki hadir bertugas di pusat peperiksaan yang telah ditetapkan mengikut jadual yang akan dimaklumkan kemudian.</p><p>4. Kerjasama dan komitmen tuan/puan dalam menjayakan peperiksaan SPM {tahun_semasa()} amatlah dihargai dan didahului dengan ucapan terima kasih.</p><p>Sekian.</p>'
     html += '<div class="footer"><p><strong>MALAYSIA MADANI</strong><br><strong>BERKHIDMAT UNTUK NEGARA</strong></p><div class="tandatangan"><div><p>Yang benar,</p><br><br><br>'
     html += f'<p>_________________________<br><strong>Pegawai Pendidikan Daerah<br>PPD {kod_ppd} - {ppd_name}</strong></p></div><div style="text-align:right;"><p>b.p Pengarah Pendidikan<br>Jabatan Pendidikan Negeri Selangor</p></div></div></div></div></div></body></html>'
     return html
@@ -1877,7 +1916,7 @@ def generate_surat_pdf_bytes_FIXED(nama, ic, jawatan, sek_asal, nama_sek_asal, p
 
         # ===== HEADER - IKUT GAMBAR =====
         logo_path = find_asset(LOGO_NAMES)
-        for cand in ["/mnt/data/jata_cropped.png", "/mnt/data/65b0dade-7a33-4312-b19b-9d5b24dd57ce.jpg", "jata_negara_hd.png","./jata_negara_hd.png","jata_negara.png","./jata_negara.png","/mnt/data/jata_negara_hd.png"]:
+        for cand in ([] if logo_path else ["/mnt/data/jata_cropped.png", "/mnt/data/65b0dade-7a33-4312-b19b-9d5b24dd57ce.jpg", "jata_negara_hd.png","./jata_negara_hd.png","jata_negara.png","./jata_negara.png","/mnt/data/jata_negara_hd.png"]):
             if os.path.exists(cand):
                 logo_path = cand
                 break
@@ -1939,11 +1978,11 @@ def generate_surat_pdf_bytes_FIXED(nama, ic, jawatan, sek_asal, nama_sek_asal, p
         # ===== TAJUK - IKUT GAMBAR =====
         tajuk_jawatan = jawatan.upper()
         if "PENYELIA KAWASAN" in tajuk_jawatan:
-            tajuk_full = f"SIJIL PELAJARAN MALAYSIA ULANGAN ( SPMU ) TAHUN 2026 :<br/>PELANTIKAN SEBAGAI PENYELIA KAWASAN BERTULIS ( TATAKIRA/PEMEGANG KUNCI )"
+            tajuk_full = f"SIJIL PELAJARAN MALAYSIA ULANGAN ( SPMU ) TAHUN {tahun_semasa()} :<br/>PELANTIKAN SEBAGAI PENYELIA KAWASAN BERTULIS ( TATAKIRA/PEMEGANG KUNCI )"
         elif "KETUA PENGAWAS" in tajuk_jawatan:
-            tajuk_full = f"SIJIL PELAJARAN MALAYSIA ( SPM ) TAHUN 2026 :<br/>PELANTIKAN SEBAGAI {tajuk_jawatan}"
+            tajuk_full = f"SIJIL PELAJARAN MALAYSIA ( SPM ) TAHUN {tahun_semasa()} :<br/>PELANTIKAN SEBAGAI {tajuk_jawatan}"
         else:
-            tajuk_full = f"SIJIL PELAJARAN MALAYSIA ( SPM ) TAHUN 2026 :<br/>PELANTIKAN SEBAGAI {tajuk_jawatan} - {display_pusat}"
+            tajuk_full = f"SIJIL PELAJARAN MALAYSIA ( SPM ) TAHUN {tahun_semasa()} :<br/>PELANTIKAN SEBAGAI {tajuk_jawatan} - {display_pusat}"
 
         story.append(Paragraph(f"<b>{tajuk_full}</b>", style_tajuk))
         story.append(Spacer(1,6))
@@ -1959,7 +1998,7 @@ def generate_surat_pdf_bytes_FIXED(nama, ic, jawatan, sek_asal, nama_sek_asal, p
         is_penyelia_kawasan = "PENYELIA KAWASAN" in jawatan.upper()
 
         if is_penyelia_kawasan:
-            para2_text = f"2. &nbsp;&nbsp;&nbsp;&nbsp;Sukacita dimaklumkan bahawa, tuan dilantik sebagai <b>{jawatan}</b> bagi peperiksaan di atas dari tempoh <b>14 Julai hingga 16 Julai 2026</b>. Pelantikan ini merupakan sebahagian daripada tugas rasmi. Maklumat pusat peperiksaan di bawah pengawasan tuan adalah seperti berikut:"
+            para2_text = f"2. &nbsp;&nbsp;&nbsp;&nbsp;Sukacita dimaklumkan bahawa, tuan dilantik sebagai <b>{jawatan}</b> bagi peperiksaan di atas dari tempoh <b>{tempoh_penyelia()} {tahun_semasa()}</b>. Pelantikan ini merupakan sebahagian daripada tugas rasmi. Maklumat pusat peperiksaan di bawah pengawasan tuan adalah seperti berikut:"
         else:
             para2_text = f"2. &nbsp;&nbsp;&nbsp;&nbsp;Sukacita dimaklumkan tuan dilantik sebagai <b>{jawatan} bagi peperiksaan di atas. Berikut adalah pusat peperiksaan di bawah pengawasan tuan:</b>"
 
@@ -2021,9 +2060,9 @@ def generate_surat_pdf_bytes_FIXED(nama, ic, jawatan, sek_asal, nama_sek_asal, p
         story.append(Paragraph(para5, style_normal))
         story.append(Spacer(1,6))
         # ===== PENUTUP + TANDATANGAN (satu blok, tak terpisah antara muka surat) =====
-        sig_path = None
+        sig_path = find_asset(SIGN_NAMES)
         _base = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else "."
-        for _name in ["tandatangan_pengarah_hd.png", "tandatangan_pengarah.png", "tandatangan_pengarah.jpg", "tandatangan.png"]:
+        for _name in ([] if sig_path else ["tandatangan_pengarah_hd.png", "tandatangan_pengarah.png", "tandatangan_pengarah.jpg", "tandatangan.png"]):
             for _dir in [_base, ".", "/mnt/data", os.path.join(_base, "assets")]:
                 _p = os.path.join(_dir, _name)
                 if os.path.exists(_p):
@@ -2056,7 +2095,7 @@ def generate_surat_pdf_bytes_FIXED(nama, ic, jawatan, sek_asal, nama_sek_asal, p
         buffer.close()
         return pdf_bytes
     except Exception as e:
-        _log.debug(f"PDF surat error: {e}")
+        _surat_err("PDF surat (ReportLab)", e)
         return None
 
 
@@ -2092,7 +2131,7 @@ def generate_surat_kolektif_pdf_bytes_JPN(surat_list, kod_ppd, ppd_name, title_p
             _w.write(_out)
             return _out.getvalue()
     except Exception as _e:
-        _log.debug(f"Gabung PDF kolektif gagal, guna kaedah lama: {_e}")
+        _surat_err("PDF kolektif (pypdf) - guna susun atur ringkas", _e)
     try:
         from reportlab.lib.pagesizes import A4
         from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
@@ -2145,7 +2184,7 @@ def generate_surat_kolektif_pdf_bytes_JPN(surat_list, kod_ppd, ppd_name, title_p
         buffer.close()
         return pdf_bytes
     except Exception as e:
-        _log.debug(f"Kolektif JPN error: {e}")
+        _surat_err("PDF kolektif", e)
         return None
 
 def create_zip_pukal_dari_JPN(surat_list, kod_ppd, ppd_name):
@@ -2156,6 +2195,7 @@ def create_zip_pukal_dari_JPN(surat_list, kod_ppd, ppd_name):
             st.warning(f"ZIP dihadkan {MAX_ZIP_FILES} file (ada {len(surat_list)}).")
             surat_list = surat_list[:MAX_ZIP_FILES]
         zip_buffer = io.BytesIO()
+        _zip_ok = 0
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             for idx, s in enumerate(surat_list, 1):
                 try:
@@ -2173,12 +2213,16 @@ def create_zip_pukal_dari_JPN(surat_list, kod_ppd, ppd_name):
                         # Format: 01_NAMA_SEKOLAH_NOSURAT.pdf - senang SUP cari
                         file_name = f"{idx:03d}_{safe_nama}_{safe_sek}_{safe_no}.pdf"
                         zip_file.writestr(file_name, pdf_bytes)
+                        _zip_ok += 1
                 except Exception as e:
+                    _surat_err("ZIP surat individu", e)
                     continue
+        if _zip_ok == 0:
+            _surat_err("ZIP surat individu", "tiada satu pun PDF berjaya dijana - ZIP tidak dihasilkan")
+            return None
         zip_buffer.seek(0)
         return zip_buffer.getvalue()
     except Exception as e:
-        _log.debug(f"ZIP JPN error: {e}")
         return None
 
 def hantar_surat_ke_sekolah_asal_bulk(surat_list, kod_ppd):
@@ -2237,7 +2281,6 @@ def hantar_surat_ke_sekolah_asal_bulk(surat_list, kod_ppd):
             pass
         return berjaya
     except Exception as e:
-        _log.debug(f"hantar sekolah asal error: {e}")
         return 0
 
 # Monkey-patch
@@ -2398,7 +2441,8 @@ FLY_PPD = {
     'hasil':      [('ringkasan', '📋 Ringkasan Pusat'), ('sekolah', '🏫 Ikut Sekolah Asal'), ('guru', '👥 Semua Guru')],
     'semakan':    [('semak', '🔍 Semakan Lantikan'), ('kosong', '➕ Isi Kekosongan')],
     'kelulusan':  [('keseluruhan', '✅ Lulus Keseluruhan'), ('pusat', '🏫 Lulus Ikut Pusat')],
-    'selenggara': [('form', '➕ Tambah Bilik Kebal'), ('senarai', '📋 Senarai Bilik Kebal'), ('import', '📤 Import Excel'), ('penyelia', '🔐 Tempatkan Penyelia'), ('surat', '📄 Jana Surat Penyelia')],
+    'selenggara': [('form', '➕ Tambah Bilik Kebal'), ('senarai', '📋 Senarai Bilik Kebal'), ('import', '📤 Import Excel')],
+    'penyelia_kawasan': [('calon', '👥 Pilih Penyelia'), ('tempat', '🔐 Tempatkan Ikut Bilik Kebal'), ('lulus', '✅ Kelulusan'), ('surat', '📄 Jana Surat Template JPN')],
     'jana_surat': [('keseluruhan', '📄 Semua Surat'), ('pusat', '🏫 Ikut Pusat'), ('sekolah', '🏫 Ikut Sekolah Asal')],
 }
 FLY_JPN = {
@@ -2415,7 +2459,12 @@ LOGO_NAMES = ["jata_cropped.png", "jata_negara_hd.png", "jata_negara.png"]
 SIGN_NAMES = ["tandatangan_pengarah_hd.png", "tandatangan_pengarah.png", "tandatangan_pengarah.jpg", "tandatangan.png"]
 
 def find_asset(names):
-    """Cari fail imej di folder projek, ./, /mnt/data dan assets/."""
+    """Cari imej: (1) yang dimuat naik ke Supabase, (2) fail di folder projek, ./, /mnt/data dan assets/."""
+    kind = "logo" if names is LOGO_NAMES else ("tandatangan" if names is SIGN_NAMES else None)
+    if kind:
+        _p = aset_file(kind)
+        if _p:
+            return _p
     for n in names:
         for d in (_ASSET_DIR, ".", "/mnt/data", _os.path.join(_ASSET_DIR, "assets"), "assets"):
             p = _os.path.join(d, n)
@@ -2435,8 +2484,131 @@ def surat_aset_amaran():
                    ". Letakkan fail ini di folder yang sama dengan spm_core.py (atau dalam folder assets/), kemudian deploy semula. "
                    "Tanpa fail ini, surat PDF keluar tanpa logo dan tandatangan.")
 
+
+# ======================================================================= v40: ASET SURAT & DIAGNOSTIK
+ASET_KEYS = {"logo": "__ASET_LOGO__", "tandatangan": "__ASET_TANDATANGAN__"}
+
+
+def _surat_err(ctx, e):
+    """Simpan ralat terakhir penjanaan surat (dipaparkan dalam panel Semakan Sistem Surat)."""
+    try:
+        st.session_state["_surat_err"] = f"{ctx}: {type(e).__name__}: {str(e)[:300]}" if isinstance(e, Exception) else f"{ctx}: {e}"
+    except Exception:
+        pass
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def aset_data_uri(kind):
+    """Imej logo/tandatangan yang dimuat naik JPN (disimpan dalam surat_templates_jpn). Pulang data URI atau ''."""
+    try:
+        res = get_supabase().table("surat_templates_jpn").select("template_html").eq("jawatan", ASET_KEYS[kind]).limit(1).execute()
+        v = ((res.data or [{}])[0].get("template_html")) or ""
+        return v if str(v).startswith("data:image") else ""
+    except Exception:
+        return ""
+
+
+def aset_bytes(kind):
+    import base64
+    uri = aset_data_uri(kind)
+    if not uri:
+        return None
+    try:
+        return base64.b64decode(uri.split(",", 1)[1])
+    except Exception:
+        return None
+
+
+def aset_file(kind):
+    """Tulis imej dari Supabase ke fail sementara supaya boleh dibaca oleh ReportLab / xhtml2pdf."""
+    import hashlib, tempfile
+    b = aset_bytes(kind)
+    if not b:
+        return None
+    p = _os.path.join(tempfile.gettempdir(), f"spm_aset_{kind}_{hashlib.md5(b).hexdigest()[:10]}.png")
+    if not _os.path.exists(p):
+        with open(p, "wb") as f:
+            f.write(b)
+    return p
+
+
+def aset_save(kind, raw_bytes):
+    """Kecilkan (maks 900px) dan simpan sebagai PNG dalam surat_templates_jpn. Pulang (ok, mesej)."""
+    import base64, io
+    try:
+        from PIL import Image
+        im = Image.open(io.BytesIO(raw_bytes)).convert("RGBA")
+        im.thumbnail((900, 900))
+        buf = io.BytesIO()
+        im.save(buf, format="PNG", optimize=True)
+        data = buf.getvalue()
+        if len(data) > 600_000:
+            im.thumbnail((500, 500))
+            buf = io.BytesIO()
+            im.save(buf, format="PNG", optimize=True)
+            data = buf.getvalue()
+        uri = "data:image/png;base64," + base64.b64encode(data).decode()
+    except Exception as e:
+        return False, f"Fail imej tidak sah: {e}"
+    try:
+        get_supabase().table("surat_templates_jpn").delete().eq("jawatan", ASET_KEYS[kind]).execute()
+        get_supabase().table("surat_templates_jpn").insert({"jawatan": ASET_KEYS[kind], "template_html": uri}).execute()
+        aset_data_uri.clear()
+        return True, ""
+    except Exception as e:
+        return False, f"Gagal simpan ke Supabase: {str(e)[:200]}"
+
+
+def aset_delete(kind):
+    try:
+        get_supabase().table("surat_templates_jpn").delete().eq("jawatan", ASET_KEYS[kind]).execute()
+        aset_data_uri.clear()
+        return True
+    except Exception:
+        return False
+
+
+def _img_uri(kind):
+    """Data URI logo/tandatangan: Supabase dahulu, kemudian fail repo. '' jika tiada."""
+    import base64, mimetypes
+    uri = aset_data_uri(kind)
+    if uri:
+        return uri
+    p = find_asset(LOGO_NAMES if kind == "logo" else SIGN_NAMES)
+    if p:
+        try:
+            with open(p, "rb") as f:
+                return f"data:{mimetypes.guess_type(p)[0] or 'image/png'};base64," + base64.b64encode(f.read()).decode()
+        except Exception:
+            return ""
+    return ""
+
+
+def _perbaiki_img_src(html):
+    """Pastikan <img src="..."> dalam templat JPN boleh dibaca: fail relatif tiada -> guna imej Supabase/repo (data URI)."""
+    import re as _re2, base64, mimetypes
+
+    def fix(m):
+        q, src = m.group(1), m.group(2)
+        if src.lower().startswith(("data:", "http://", "https://")):
+            return m.group(0)
+        base = _os.path.basename(src)
+        low = base.lower()
+        p = src if _os.path.exists(src) else find_asset([base])
+        if p:
+            try:
+                with open(p, "rb") as f:
+                    return f"src={q}data:{mimetypes.guess_type(p)[0] or 'image/png'};base64,{base64.b64encode(f.read()).decode()}{q}"
+            except Exception:
+                return m.group(0)
+        kind = "logo" if any(x in low for x in ("jata", "logo", "lambang")) else ("tandatangan" if any(x in low for x in ("tanda", "sign", "ttd")) else None)
+        uri = _img_uri(kind) if kind else ""
+        return f"src={q}{uri}{q}" if uri else m.group(0)
+    return _re2.sub(r'src\s*=\s*(["\'])([^"\']+)\1', fix, html, flags=_re2.I)
+
+
 def render_footer():
-    st.markdown("<div class='app-footer'>Sistem Pelantikan Petugas SPM Selangor 2026 · Jabatan Pendidikan Negeri Selangor</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='app-footer'>Sistem Pelantikan Petugas SPM Selangor {tahun_semasa()} · Jabatan Pendidikan Negeri Selangor</div>", unsafe_allow_html=True)
 
 def apply_global_ui():
     """Panggil SETIAP rerun (CSS mesti dipaparkan semula)."""
@@ -2448,3 +2620,257 @@ def apply_global_ui():
     _apply_jpn_kad_css()
     for _h in _CSS_QUEUE:
         st.markdown(_h, unsafe_allow_html=True)
+
+
+
+# ================== PATCH FIX LOGO & TANDATANGAN - START ==================
+# Override fungsi bermasalah untuk pastikan logo/tandatangan keluar
+
+def _img_uri_FIXED(kind):
+    """Data URI logo/tandatangan: Supabase dahulu, kemudian fail repo. FIX robust"""
+    import base64, mimetypes
+    try:
+        uri = aset_data_uri(kind)
+        if uri and str(uri).startswith("data:image"):
+            return uri
+    except Exception:
+        pass
+    try:
+        p = aset_file(kind)
+        if p and _os.path.exists(p):
+            with open(p, "rb") as f:
+                return f"data:{mimetypes.guess_type(p)[0] or 'image/png'};base64," + base64.b64encode(f.read()).decode()
+    except Exception:
+        pass
+    try:
+        p = find_asset(LOGO_NAMES if kind == "logo" else SIGN_NAMES)
+        if p and _os.path.exists(p):
+            with open(p, "rb") as f:
+                return f"data:{mimetypes.guess_type(p)[0] or 'image/png'};base64," + base64.b64encode(f.read()).decode()
+    except Exception:
+        pass
+    return ""
+
+def _perbaiki_img_src_FIXED(html):
+    import re as _re2, base64, mimetypes
+    def fix(m):
+        q, src = m.group(1), m.group(2)
+        s_low = src.lower().strip()
+        if s_low.startswith(("data:", "http://", "https://")):
+            return m.group(0)
+        base = _os.path.basename(src)
+        low = base.lower()
+        p = None
+        try:
+            if _os.path.exists(src):
+                p = src
+            else:
+                p = find_asset([base])
+        except Exception:
+            p = None
+        if p and _os.path.exists(p):
+            try:
+                with open(p, "rb") as f:
+                    return f"src={q}data:{mimetypes.guess_type(p)[0] or 'image/png'};base64,{base64.b64encode(f.read()).decode()}{q}"
+            except Exception:
+                pass
+        kind = None
+        if any(x in low for x in ("jata", "logo", "lambang")):
+            kind = "logo"
+        elif any(x in low for x in ("tanda", "sign", "ttd")):
+            kind = "tandatangan"
+        else:
+            if "logo" in s_low or "jata" in s_low:
+                kind = "logo"
+            elif "tanda" in s_low or "sign" in s_low:
+                kind = "tandatangan"
+        uri = _img_uri_FIXED(kind) if kind else ""
+        if uri and uri.startswith("data:image"):
+            return f"src={q}{uri}{q}"
+        return m.group(0)
+    return _re2.sub(r'src\s*=\s*(["\'])([^"\']+)\1', fix, html, flags=_re2.I)
+
+def find_asset_FIXED(names):
+    low_names = [str(x).lower() for x in names]
+    is_logo = names is LOGO_NAMES or any("jata" in n or "logo" in n for n in low_names)
+    is_sign = names is SIGN_NAMES or any("tanda" in n or "sign" in n or "ttd" in n for n in low_names)
+    kind = "logo" if is_logo else ("tandatangan" if is_sign else None)
+    if names is LOGO_NAMES:
+        kind = "logo"
+    if names is SIGN_NAMES:
+        kind = "tandatangan"
+    if kind:
+        try:
+            _p = aset_file(kind)
+            if _p and _os.path.exists(_p):
+                return _p
+        except Exception:
+            pass
+    for n in names:
+        for d in (_ASSET_DIR, ".", "/mnt/data", _os.path.join(_ASSET_DIR, "assets"), "assets"):
+            try:
+                p = _os.path.join(d, n)
+                if _os.path.exists(p):
+                    return p
+            except Exception:
+                continue
+    return None
+
+def aset_save_FIXED(kind, raw_bytes):
+    import base64, io
+    try:
+        from PIL import Image
+        im = Image.open(io.BytesIO(raw_bytes))
+        if im.mode in ("RGBA", "LA", "PA"):
+            bg = Image.new("RGB", im.size, (255, 255, 255))
+            try:
+                bg.paste(im, mask=im.split()[3])
+            except Exception:
+                bg.paste(im, mask=im.convert("RGBA").split()[3])
+            im = bg
+        else:
+            im = im.convert("RGB")
+        im.thumbnail((900, 900))
+        buf = io.BytesIO()
+        im.save(buf, format="PNG", optimize=True)
+        data = buf.getvalue()
+        if len(data) > 600_000:
+            im.thumbnail((500, 500))
+            buf = io.BytesIO()
+            im.save(buf, format="PNG", optimize=True)
+            data = buf.getvalue()
+        uri = "data:image/png;base64," + base64.b64encode(data).decode()
+    except Exception as e:
+        return False, f"Fail imej tidak sah: {e}"
+    try:
+        get_supabase().table("surat_templates_jpn").delete().eq("jawatan", ASET_KEYS[kind]).execute()
+        get_supabase().table("surat_templates_jpn").insert({"jawatan": ASET_KEYS[kind], "template_html": uri}).execute()
+        aset_data_uri.clear()
+        return True, ""
+    except Exception as e:
+        return False, f"Gagal simpan ke Supabase: {str(e)[:200]}"
+
+def html_to_pdf_bytes_FIXED_PATCH(html):
+    try:
+        from xhtml2pdf import pisa
+        import io
+        buf = io.BytesIO()
+        try:
+            html = _perbaiki_img_src_FIXED(html)
+        except Exception:
+            pass
+        wrapped = _bungkus_html_surat(html)
+        res = pisa.CreatePDF(src=wrapped, dest=buf, encoding="utf-8")
+        if res.err:
+            _surat_err("xhtml2pdf (templat JPN)", f"{res.err} ralat semasa menjana PDF dari templat")
+            return None
+        return buf.getvalue()
+    except Exception as e:
+        _surat_err("xhtml2pdf (templat JPN)", e)
+        return None
+
+# --- Override global names ---
+find_asset = find_asset_FIXED
+_img_uri = _img_uri_FIXED
+_perbaiki_img_src = _perbaiki_img_src_FIXED
+html_to_pdf_bytes = html_to_pdf_bytes_FIXED_PATCH
+aset_save = aset_save_FIXED
+# ================== PATCH FIX LOGO & TANDATANGAN - END ==================
+
+
+
+# ================== PATCH V2 AUTO INJECT LOGO & SIGNATURE - START ==================
+def render_jpn_template_html_V2(jawatan, nama, ic, sek_asal, nama_sek_asal, pusat, nama_pusat, no_surat, kod_ppd, ppd_name, tarikh, bilik_kebal="", extra=None):
+    try:
+        tmpl = get_jpn_template_for_jawatan(jawatan)
+        if not tmpl:
+            return None
+        nama = clean_nan(nama) or "Nama Guru"
+        ic = clean_nan(ic)
+        jawatan = clean_nan(jawatan) or "Petugas"
+        sek_asal = clean_nan(sek_asal)
+        nama_sek_asal = clean_nan(nama_sek_asal) or get_nama_sekolah_full(sek_asal, "")
+        pusat = clean_nan(pusat)
+        nama_pusat = clean_nan(nama_pusat) or get_nama_sekolah_full(pusat, "")
+        no_surat = clean_nan(no_surat) or f"JPNS.SPP 600-7/17/5 Jld.2 (01)"
+        kod_ppd = clean_nan(kod_ppd) or "BA"
+        ppd_name = clean_nan(ppd_name) or kod_ppd
+        tarikh = clean_nan(tarikh) or str(datetime.date.today().strftime("%d %B %Y"))
+        bilik_kebal = clean_nan(bilik_kebal)
+
+        sek_penuh = f"{sek_asal} - {nama_sek_asal}" if nama_sek_asal and nama_sek_asal.upper() != str(sek_asal).upper() else (nama_sek_asal or sek_asal)
+        pusat_penuh = f"{pusat} - {nama_pusat}" if nama_pusat and nama_pusat.upper() != str(pusat).upper() else pusat
+
+        logo_uri = _img_uri_FIXED("logo")
+        sign_uri = _img_uri_FIXED("tandatangan")
+        
+        replacements = {
+            "NAMA": nama, "NAMA_GURU": nama,
+            "IC": ic, "IC_GURU": ic,
+            "JAWATAN": jawatan, "JAWATAN_CADANGAN": jawatan,
+            "SEKOLAH_ASAL": sek_asal, "KOD_SEKOLAH_ASAL": sek_asal,
+            "NAMA_SEKOLAH_ASAL": nama_sek_asal,
+            "SEKOLAH_ASAL_PENUH": sek_penuh,
+            "PUSAT": pusat, "KOD_PUSAT": pusat, "NO_PUSAT": pusat,
+            "NAMA_PUSAT": nama_pusat,
+            "PUSAT_PENUH": pusat_penuh,
+            "BILIK_KEBAL": bilik_kebal, "KOD_BILIK_KEBAL": bilik_kebal,
+            "NO_SURAT": no_surat,
+            "PPD": kod_ppd, "KOD_PPD": kod_ppd,
+            "PPD_NAME": ppd_name, "NAMA_PPD": ppd_name,
+            "TARIKH": tarikh,
+            "LOGO": logo_uri, "TANDATANGAN": sign_uri, "TANDA_TANGAN": sign_uri,
+            "TAHUN": str(tahun_semasa()),
+        }
+        # placeholder tambahan (cth. Penyelia Kawasan: SENARAI_PUSAT_JADUAL, ALAMAT_BILIK_KEBAL dll)
+        if extra:
+            for _k, _v in extra.items():
+                replacements[str(_k)] = "" if _v is None else _v
+        import re
+        html = tmpl
+        for k, v in replacements.items():
+            v = str(v)
+            esc = re.escape(k)
+            html = re.sub(r"\{\{\s*" + esc + r"\s*\}\}", lambda m, v=v: v, html, flags=re.IGNORECASE)
+            html = re.sub(r"\[" + esc + r"\]", lambda m, v=v: v, html, flags=re.IGNORECASE)
+        
+        # FIX V2: Kalau template tak ada LOGO langsung, inject automatik di atas
+        low = html.lower()
+        if "data:image" not in low and "{{logo}}" not in tmpl.lower() and "jata" not in low and logo_uri:
+            # inject header dengan logo
+            inject_logo = f'<div style="text-align:center; margin-bottom:10px;"><img src="{logo_uri}" style="width:80px; height:auto;" /></div>'
+            # kalau ada <body>, masuk selepas body
+            if "<body" in low:
+                html = re.sub(r"(<body[^>]*>)", r"\1" + inject_logo, html, flags=re.I, count=1)
+            else:
+                html = inject_logo + html
+        
+        # FIX V2: Kalau template tak ada tandatangan, inject di bawah
+        if "tandatangan" not in low and "tanda_tangan" not in low and "{{tandatangan}}" not in tmpl.lower() and sign_uri:
+            inject_sign = f'<div style="margin-top:40px;"><p>Saya yang menjalankan amanah,</p><img src="{sign_uri}" style="width:150px; height:auto; margin:10px 0;" /><p><b>(DATIN WAN NOR ASHIKIN BINTI ABU KASSIM)</b><br/>Pengarah Pendidikan<br/>Jabatan Pendidikan Negeri Selangor</p></div>'
+            if "</body>" in low:
+                html = re.sub(r"</body>", inject_sign + "</body>", html, flags=re.I, count=1)
+            else:
+                html = html + inject_sign
+        
+        # clear cache lama dan fix src
+        try:
+            html = _perbaiki_img_src_FIXED(html)
+        except Exception:
+            pass
+        return html
+    except Exception as e:
+        return None
+
+# Override render juga
+render_jpn_template_html = render_jpn_template_html_V2
+
+def _clear_aset_cache():
+    try:
+        aset_data_uri.clear()
+    except Exception:
+        pass
+
+# Paksa clear cache setiap kali app start supaya data dari dashboard Supabase terus nampak
+_clear_aset_cache()
+# ================== PATCH V2 - END ==================

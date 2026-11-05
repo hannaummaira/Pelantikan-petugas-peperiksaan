@@ -1,41 +1,49 @@
 # -*- coding: utf-8 -*-
 """
-ui_theme.py - Susun atur & gaya seragam ikut contoh (Dashboard SUP / Dashboard PPD / Pilih Sekolah SUP).
-Digunakan oleh role_sup.py, role_ppd.py, role_jpn.py dan daerah_app.py / jpn_app.py.
+ui_theme.py - Susun atur & gaya seragam
 """
+from tahun_sistem import tahun_semasa
 import datetime
 import html as _html
 import json
-import streamlit as st
-import spm_core as core
-from spm_core import PPD_MAP, SCOPE, get_pusat_df
+try:
+    import streamlit as st
+except ModuleNotFoundError:
+    class _Dummy:
+        def __getattr__(self, name):
+            return lambda *a, **k: None
+    st = _Dummy()
+
+try:
+    import spm_core as core
+    from spm_core import PPD_MAP, SCOPE, get_pusat_df
+except Exception:
+    try:
+        import spm_core_1 as core
+        from spm_core_1 import PPD_MAP, SCOPE, get_pusat_df
+    except Exception:
+        core = None
+        PPD_MAP = {}
+        SCOPE = {}
+        def get_pusat_df():
+            return None
 
 MY_TZ = datetime.timezone(datetime.timedelta(hours=8))
-
-
 def now_my():
     return datetime.datetime.now(MY_TZ).strftime("%d/%m %H:%M:%S")
-
-
 def esc(x):
     return _html.escape(str(x if x is not None else ""))
-
-
 def kc(key):
-    """Container ber-key (Streamlit >= 1.39); jatuh ke container biasa pada versi lama."""
     try:
         return st.container(key=key)
     except TypeError:
         return st.container()
-
 
 THEME_CSS = """
 <style>
 [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"], [data-testid="collapsedControl"] {display:none!important}
 .stApp {background:#e3f2fd!important}
 .block-container {max-width:1600px!important;padding-top:.6rem!important;padding-bottom:1rem!important}
-
-/* ---------- kotak & header (contoh Dashboard SUP / PPD) ---------- */
 .sup-box {background:#fff;border:1px solid #c5d6e8;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden;margin-bottom:8px}
 .sup-id {font-size:11px;font-weight:700;line-height:1.35;letter-spacing:.03em;color:#0d47a1;text-transform:uppercase}
 .sup-pusat {margin-top:8px;background:#e8f0fe;border:1px solid #90caf9;border-radius:4px;padding:8px}
@@ -68,13 +76,9 @@ THEME_CSS = """
 .sup-tile .n {font-size:28px;font-weight:800;color:#0d47a1;line-height:1;margin-top:4px}
 .sup-tile .s {font-size:10px;color:#5f6f85;margin-top:4px}
 .sup-tile.hl .s {color:#1565c0;font-weight:500}
-
-/* ---------- kad metrik Streamlit => kad statistik contoh ---------- */
 [data-testid="stMetric"] {background:#fff;border:1px solid #c5d6e8;border-radius:4px;padding:10px 12px!important}
 [data-testid="stMetricLabel"] p {font-size:11px!important;font-weight:700!important;color:#5f6f85!important;text-transform:none}
 [data-testid="stMetricValue"] {font-size:22px!important;font-weight:800!important;color:#0d47a1!important}
-
-/* ---------- menu kiri: biru pekat, aktif = garis kuning ---------- */
 .st-key-shellmenu, .st-key-shellsub {gap:4px!important}
 .st-key-shellmenu [class*="st-key-flymenu_"] button {width:100%;justify-content:flex-start!important;text-align:left!important;background:#0d47a1!important;color:#fff!important;border:none!important;border-left:3px solid transparent!important;border-radius:0 4px 4px 0!important;padding:8px 12px!important;min-height:0!important;box-shadow:none!important;transform:none!important}
 .st-key-shellmenu [class*="st-key-flymenu_"] button * {color:#fff!important;font-size:12px!important;font-weight:600!important;text-align:left!important}
@@ -91,8 +95,6 @@ THEME_CSS = """
 .st-key-shellsub [class*="st-key-flysub_"] [data-testid="stBaseButton-primary"] * {color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;font-weight:800!important}
 .st-key-suprefresh .stButton>button {width:100%;background:#0d47a1!important;border:none!important;border-radius:4px!important;box-shadow:0 2px 0 #082c62!important;padding:10px 0!important;min-height:0!important}
 .st-key-suprefresh .stButton>button * {color:#fff!important;font-size:12px!important;font-weight:800!important;letter-spacing:.03em}
-
-/* ---------- halaman pilih sekolah (contoh SUP Gombak) ---------- */
 .land-top {background:#0d47a1;color:#fff;border-radius:6px;padding:10px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .land-top .logo {width:34px;height:34px;background:#fff;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:#0d47a1;font-weight:800;font-size:13px;margin-right:10px}
 .land-top .n {font-weight:700;font-size:13px;letter-spacing:.02em}
@@ -109,8 +111,6 @@ THEME_CSS = """
 .land-stat .l {font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#5f708c}
 .land-stat .v {font-size:22px;font-weight:800;color:#13233f;line-height:1;margin-top:4px}
 .land-stat .s {font-size:10px;color:#5f708c;margin-top:3px}
-.land-stat.ok {background:#dcfce7;border-color:#bbf7d0}.land-stat.ok .l,.land-stat.ok .s{color:#15803d}.land-stat.ok .v{color:#166534}
-.land-stat.warn {background:#fef3c7;border-color:#fde68a}.land-stat.warn .l,.land-stat.warn .s{color:#b45309}.land-stat.warn .v{color:#92400e}
 .sch-card {padding:2px 2px 0}
 .sch-row {display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .sch-ico {width:38px;height:38px;border-radius:10px;background:#e3eefe;display:inline-flex;align-items:center;justify-content:center;font-size:18px;margin-right:10px}
@@ -127,132 +127,63 @@ THEME_CSS = """
 </style>
 """
 
-
-# ======================================================================= KONTRAS TINGGI (tulisan & jadual lebih jelas)
 KONTRAS_CSS = """
 <style>
-/* ---- teks asas: gelap pekat, saiz selesa ---- */
 html, body, .stApp, [data-testid="stAppViewContainer"] {color:#0b1b33!important}
-[data-testid="stMarkdownContainer"] p, [data-testid="stMarkdownContainer"] li, [data-testid="stMarkdownContainer"] span {color:#0b1b33!important;font-size:15px;line-height:1.5}
-h1,h2,h3,h4,h5,h6 {color:#0a2a66!important;font-weight:800!important}
+[data-testid="stMarkdownContainer"] p, [data-testid="stMarkdownContainer"] li {color:#0b1b33;font-size:15px;line-height:1.5}
 [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label, label {color:#0b1b33!important;font-weight:700!important;font-size:14px!important}
 [data-testid="stCaptionContainer"] p, .stCaption, small {color:#1e293b!important;font-size:13px!important;font-weight:500!important;opacity:1!important}
 [data-testid="stMetricLabel"] p {color:#1e293b!important;font-size:12px!important;font-weight:700!important}
 [data-testid="stMetricValue"] {color:#0a2a66!important}
 [data-baseweb="tab"] {font-weight:700!important;color:#0a2a66!important}
 [data-testid="stExpander"] summary p {font-weight:700!important;color:#0a2a66!important}
-
-/* ---- input & pilihan: sempadan jelas ---- */
 input, textarea, [data-baseweb="select"] > div, [data-baseweb="input"] {color:#0b1b33!important;background:#ffffff!important;border-color:#475569!important}
 [data-baseweb="select"] *, [data-baseweb="input"] * {color:#0b1b33!important}
-input::placeholder, textarea::placeholder {color:#475569!important;opacity:1!important}
-/* ---- BUTANG: latar biru pekat + tulisan PUTIH (menimpa warna teks markdown di dalam butang) ---- */
 .stButton > button,
 .stDownloadButton > button,
 [data-testid="stFormSubmitButton"] > button,
 button[data-testid="stBaseButton-primary"],
-button[data-testid="stBaseButton-secondary"],
-button[data-testid="stBaseButton-primaryFormSubmit"],
-button[data-testid="stBaseButton-secondaryFormSubmit"] {background:#0d47a1!important;background-image:none!important;border:2px solid #0a367e!important;color:#ffffff!important;font-weight:700!important}
+button[data-testid="stBaseButton-secondary"] {background:#0d47a1!important;border:2px solid #0a367e!important;color:#ffffff!important;font-weight:700!important}
 .stButton > button *,
-.stButton > button p,
-.stButton > button span,
-.stButton > button div,
 .stDownloadButton > button *,
-.stDownloadButton > button p,
-.stDownloadButton > button span,
-.stDownloadButton > button div,
-[data-testid="stFormSubmitButton"] > button *,
-[data-testid="stFormSubmitButton"] > button p,
-[data-testid="stFormSubmitButton"] > button span,
-[data-testid="stFormSubmitButton"] > button div,
 button[data-testid="stBaseButton-primary"] *,
-button[data-testid="stBaseButton-primary"] p,
-button[data-testid="stBaseButton-primary"] span,
-button[data-testid="stBaseButton-primary"] div,
-button[data-testid="stBaseButton-secondary"] *,
-button[data-testid="stBaseButton-secondary"] p,
-button[data-testid="stBaseButton-secondary"] span,
-button[data-testid="stBaseButton-secondary"] div,
-button[data-testid="stBaseButton-primaryFormSubmit"] *,
-button[data-testid="stBaseButton-primaryFormSubmit"] p,
-button[data-testid="stBaseButton-primaryFormSubmit"] span,
-button[data-testid="stBaseButton-primaryFormSubmit"] div,
-button[data-testid="stBaseButton-secondaryFormSubmit"] *,
-button[data-testid="stBaseButton-secondaryFormSubmit"] p,
-button[data-testid="stBaseButton-secondaryFormSubmit"] span,
-button[data-testid="stBaseButton-secondaryFormSubmit"] div {color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;fill:#ffffff!important}
-.stButton > button:hover,
-.stDownloadButton > button:hover,
-[data-testid="stFormSubmitButton"] > button:hover,
-button[data-testid="stBaseButton-primary"]:hover,
-button[data-testid="stBaseButton-secondary"]:hover,
-button[data-testid="stBaseButton-primaryFormSubmit"]:hover,
-button[data-testid="stBaseButton-secondaryFormSubmit"]:hover {background:#0a367e!important;border-color:#082a66!important}
-.stButton > button[kind="primary"],
-button[data-testid="stBaseButton-primary"],
-button[data-testid="stBaseButton-primaryFormSubmit"] {background:#0a2a66!important;border-color:#082050!important}
-.stButton > button:disabled,
-.stDownloadButton > button:disabled,
-button[data-testid="stBaseButton-secondary"]:disabled,
-button[data-testid="stBaseButton-primary"]:disabled {background:#64748b!important;border-color:#475569!important;opacity:1!important}
-
-/* ---- jadual: bingkai tebal & bayang supaya jelas dari latar ---- */
-[data-testid="stDataFrame"], [data-testid="stDataEditor"] {border:2px solid #475569!important;border-radius:6px!important;box-shadow:0 2px 6px rgba(15,23,42,.18)!important;background:#ffffff!important}
-[data-testid="stMarkdownContainer"] table, [data-testid="stTable"] table {border-collapse:collapse!important;width:100%!important;background:#fff!important;border:2px solid #475569!important}
-[data-testid="stMarkdownContainer"] th, [data-testid="stTable"] th {background:#0d47a1!important;color:#ffffff!important;font-size:13px!important;font-weight:800!important;padding:8px 10px!important;border:1px solid #0a367e!important;text-align:left!important}
-[data-testid="stMarkdownContainer"] td, [data-testid="stTable"] td {color:#0b1b33!important;font-size:14px!important;padding:7px 10px!important;border:1px solid #64748b!important}
-[data-testid="stMarkdownContainer"] tbody tr:nth-child(even) td, [data-testid="stTable"] tbody tr:nth-child(even) td {background:#eaf2ff!important}
-
-/* ---- komponen buatan sendiri (header, kad, menu, senarai nama): lebih gelap & lebih besar ---- */
-.sup-id {font-size:12px!important;color:#0a2a66!important}
-.sup-last {font-size:12px!important;color:#1e293b!important}
-.sup-red {font-size:11px!important;line-height:14px!important;color:#b71c1c!important;font-weight:600!important}
-.sup-info {font-size:12.5px!important}
-.sup-info b {color:#1e293b!important}
-.sup-note {font-size:12px!important;border:1.5px solid #90a4c4!important}
-.sup-note span {color:#1e293b!important}
-.sup-pusat .l {font-size:11px!important;color:#0a2a66!important}
-.sup-right {font-size:12px!important;opacity:1!important}
-.sup-sub-h {font-size:12px!important}
-.sup-card-h .t {font-size:13px!important}
-.sup-chip {font-size:11.5px!important;border-width:1.5px!important}
-.sup-tile .l {font-size:12px!important;color:#1e293b!important}
-.sup-tile .s {font-size:12px!important;color:#1e293b!important}
-.sup-tile .n {color:#0a2a66!important}
-.sup-box {border:1.5px solid #90a4c4!important}
-.st-key-shellmenu [class*="st-key-flymenu_"] button * {font-size:13px!important}
-.st-key-shellsub [class*="st-key-flysub_"] button * {font-size:13px!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important}
-.cn-card {border:1.5px solid #90a4c4!important}
-.cn-card .l {font-size:11px!important;color:#1e293b!important}
-.cn-card .s {font-size:12px!important;color:#1e293b!important}
-.cn-card .v {color:#0a2a66!important}
-.cn-head {font-size:11.5px!important;color:#0a2a66!important;background:#cfe0f7!important}
-.cn-nm {font-size:14px!important;color:#0b1b33!important}
-.cn-ic {font-size:12.5px!important;color:#0b1b33!important}
-.cn-sm {font-size:13px!important;color:#0b1b33!important}
-.cn-legend {font-size:12.5px!important;color:#1e293b!important}
-.cn-bar {border:1.5px solid #90a4c4!important}
-.cn-bar .k {font-size:11.5px!important;color:#1e293b!important}
-.cn-guide {font-size:12.5px!important;color:#0b1b33!important}
-.cn-b {font-size:11.5px!important}
-.cn-b.ok {color:#14532d!important}
-.cn-b.sim {color:#78350f!important}
-.land-p, .land-stat .l, .land-stat .s, .sch-sub, .sch-meta {color:#1e293b!important}
-.land-p {font-size:15px!important}
-.sch-name {font-size:16px!important;color:#0b1b33!important}
-.sch-code {font-size:12px!important}
-.badge {font-size:12px!important}
+button[data-testid="stBaseButton-secondary"] * {color:#ffffff!important;-webkit-text-fill-color:#ffffff!important}
+[data-testid="stMarkdownContainer"] th, [data-testid="stTable"] th {background:#0d47a1!important;color:#ffffff!important}
+[data-testid="stMarkdownContainer"] td, [data-testid="stTable"] td {color:#0b1b33!important}
+.cn-head {color:#ffffff!important;background:#0d47a1!important}
 </style>
 """
 
+FIX_CSS = """
+<style>
+/* PPD PUTIH - yang kau kata ok */
+html body [data-testid="stMarkdownContainer"] .sup-banner,
+html body [data-testid="stMarkdownContainer"] .sup-banner span,
+html body [data-testid="stMarkdownContainer"] .land-top,
+html body [data-testid="stMarkdownContainer"] .land-top span,
+html body [data-testid="stMarkdownContainer"] .sup-sub-h,
+html body [data-testid="stMarkdownContainer"] .sup-card-h,
+html body [data-testid="stMarkdownContainer"] .cn-head,
+.sup-banner, .sup-banner span, .sup-banner div, .sup-banner p,
+.land-top, .land-top span, .land-top div, .land-top p,
+.sup-sub-h, .sup-sub-h span,
+.sup-card-h, .sup-card-h span,
+.cn-head, .cn-head span,
+.ppd-table th {
+  color:#ffffff!important;
+  -webkit-text-fill-color:#ffffff!important;
+}
+.sup-banner, .land-top, .sup-sub-h, .sup-card-h, .cn-head {background:#0d47a1!important}
+div[style*="0d47a1"] h2, div[style*="0d47a1"] p {color:#ffffff!important; -webkit-text-fill-color:#ffffff!important}
+div[style*="0d47a1"] p {color:#e3f2fd!important; -webkit-text-fill-color:#e3f2fd!important}
+</style>
+"""
 
 def apply_theme():
     st.markdown(THEME_CSS, unsafe_allow_html=True)
     st.markdown(KONTRAS_CSS, unsafe_allow_html=True)
+    st.markdown(FIX_CSS, unsafe_allow_html=True)
 
-
-# ------------------------------------------------------------------ header
 def _refresh_block(role):
     with kc("suprefresh"):
         if st.button("REFRESH - Baca Data Baru", key=f"refresh_{role}", use_container_width=True):
@@ -260,7 +191,6 @@ def _refresh_block(role):
             st.session_state["last_refresh"] = now_my()
             st.rerun()
     st.markdown('<div class="sup-red">Tekan selepas SUP buat pertukaran / cadangan</div>', unsafe_allow_html=True)
-
 
 def shell_header(role, id_html, banner_title, pill, right_text, info_html):
     last = st.session_state.get("last_refresh") or now_my()
@@ -270,22 +200,12 @@ def shell_header(role, id_html, banner_title, pill, right_text, info_html):
         st.markdown(f'<div class="sup-box" style="padding:12px">{id_html}<div class="sup-last">Last: {esc(last)}</div></div>', unsafe_allow_html=True)
         _refresh_block(role)
     with hr:
-        st.markdown(f"""
-        <div class="sup-box">
-          <div class="sup-banner">
-            <div style="display:flex;align-items:center;flex-wrap:wrap"><span class="t">{esc(banner_title)}</span><span class="sup-pill"><i></i>{esc(pill)}</span></div>
-            <div class="sup-right">{esc(right_text)}</div>
-          </div>
-          <div class="sup-info">{info_html}<span class="sup-online"><i></i> Online</span></div>
-        </div>""", unsafe_allow_html=True)
-
+        st.markdown(f"""<div class="sup-box"><div class="sup-banner"><div style="display:flex;align-items:center;flex-wrap:wrap"><span class="t">{esc(banner_title)}</span><span class="sup-pill"><i></i>{esc(pill)}</span></div><div class="sup-right">{esc(right_text)}</div></div><div class="sup-info">{info_html}<span class="sup-online"><i></i> Online</span></div></div>""", unsafe_allow_html=True)
 
 def _kv(k, v):
     return f'<span><b>{esc(k)}:</b> <b style="color:#1a2332">{esc(v)}</b></span>'
 
-
 def sup_no_pusat_list(kod):
-    """No pusat bagi sekolah ini (baca pusat_master - sudah ditapis ikut daerah)."""
     out = []
     try:
         df = get_pusat_df()
@@ -307,7 +227,6 @@ def sup_no_pusat_list(kod):
         pass
     return out
 
-
 def shell_header_sup(kod, info, no_pusat_list):
     nama = info.get("nama_sekolah", "")
     kppd = str(info.get("kod_ppd", "")).upper()
@@ -316,28 +235,20 @@ def shell_header_sup(kod, info, no_pusat_list):
     id_html = (f'<div class="sup-id">SUP {esc(kod)}<br>{esc(nama)}<br>{esc(kppd)} - {esc(nppd)}</div>'
                f'<div class="sup-pusat"><div class="l">NO PUSAT SEKOLAH:</div><div class="v">{esc(pusat)}</div></div>')
     info_html = _kv("Kod Sekolah", kod) + '<span class="sep">|</span>' + _kv("PPD", f"{kppd} - {nppd}") + '<span class="sep">|</span>' + _kv("Nama", nama)
-    shell_header("sup", id_html, f"Dashboard SUP - {kod} {nama}", "App Ringan - 1 Sekolah Sahaja",
-                 "Sistem Pengurusan Pengawas Peperiksaan | JPN Selangor 2026", info_html)
-
+    shell_header("sup", id_html, f"Dashboard SUP - {kod} {nama}", "App Ringan - 1 Sekolah Sahaja", f"Sistem Pengurusan Pengawas Peperiksaan | JPN Selangor {tahun_semasa()}", info_html)
 
 def shell_header_ppd(kod_ppd):
     nppd = PPD_MAP.get(kod_ppd, "")
     id_html = f'<div class="sup-id">PPD {esc(kod_ppd)}<br>{esc(nppd)}<br>Pejabat Pendidikan Daerah</div>'
     info_html = _kv("Kod PPD", kod_ppd) + '<span class="sep">|</span>' + _kv("Daerah", nppd) + '<span class="sep">|</span>' + _kv("Sumber data", "cadangan_sup (daerah ini sahaja)")
-    shell_header("ppd", id_html, f"Dashboard PPD - {kod_ppd} {nppd}", f"App Daerah - {nppd} Sahaja",
-                 "Sistem Pengurusan Pengawas Peperiksaan | JPN Selangor 2026", info_html)
-
+    shell_header("ppd", id_html, f"Dashboard PPD - {kod_ppd} {nppd}", f"App Daerah - {nppd} Sahaja", f"Sistem Pengurusan Pengawas Peperiksaan | JPN Selangor {tahun_semasa()}", info_html)
 
 def shell_header_jpn():
     id_html = '<div class="sup-id">JPN SELANGOR<br>Pentadbir Sistem<br>Semua Daerah</div>'
     info_html = _kv("Peranan", "JPN") + '<span class="sep">|</span>' + _kv("Skop", "10 daerah PPD")
-    shell_header("jpn", id_html, "Dashboard JPN Selangor - Pelantikan SPM 2026", "Pentadbir Negeri",
-                 "Sistem Pengurusan Pengawas Peperiksaan | JPN Selangor 2026", info_html)
+    shell_header("jpn", id_html, f"Dashboard JPN Selangor - Pelantikan SPM {tahun_semasa()}", "Pentadbir Negeri", f"Sistem Pengurusan Pengawas Peperiksaan | JPN Selangor {tahun_semasa()}", info_html)
 
-
-# ------------------------------------------------------------------ menu kiri | sub menu | kandungan
 def shell_layout(skey, items, fly_map, dash_key, prefix):
-    """Menu kiri + (sub menu jika ada) + ruang kandungan. Pulang (menu, sub_aktif, col_kandungan)."""
     keys = [k for k, _ in items]
     if st.session_state.get(skey) not in keys:
         st.session_state[skey] = keys[0]
@@ -347,8 +258,7 @@ def shell_layout(skey, items, fly_map, dash_key, prefix):
     with cols[0]:
         with kc("shellmenu"):
             for k, label in items:
-                if st.button(label, key=f"flymenu_{skey}_{k}", use_container_width=True,
-                             type="primary" if k == cur else "secondary"):
+                if st.button(label, key=f"flymenu_{skey}_{k}", use_container_width=True, type="primary" if k == cur else "secondary"):
                     if k != cur:
                         st.session_state[skey] = k
                         st.rerun()
@@ -364,8 +274,7 @@ def shell_layout(skey, items, fly_map, dash_key, prefix):
             st.markdown('<div class="sup-sub-h">SUB MENU</div>', unsafe_allow_html=True)
             with kc("shellsub"):
                 for k, label in subs:
-                    if st.button(label, key=f"flysub_{sk}_{k}", use_container_width=True,
-                                 type="primary" if k == fly_cur else "secondary"):
+                    if st.button(label, key=f"flysub_{sk}_{k}", use_container_width=True, type="primary" if k == fly_cur else "secondary"):
                         if k != fly_cur:
                             st.session_state[sk] = k
                             st.rerun()

@@ -1,24 +1,41 @@
 # -*- coding: utf-8 -*-
 """Peranan JPN - pentadbir negeri (semua daerah)."""
+from tahun_sistem import tahun_semasa
 import spm_core as _core
 import ui_theme as _ui
 globals().update({k: v for k, v in vars(_core).items() if not k.startswith("__")})
 globals().update({k: v for k, v in vars(_ui).items() if not k.startswith("__")})
+from surat_tools import surat_panel, surat_aset_panel, surat_diagnostik, lampiran_panel_jpn
 
 def render_jpn():
     MENU_JPN = [('dashboard', '📊 Dashboard JPN'), ('jpn_template_surat', '📄 Template Surat JPN (11 Jawatan)'), ('sekolah', '🏫 Semua Sekolah'), ('pusat', '🏫 Pusat Master'),
                     ('guru', '👨\u200d🏫 Guru Master'), ('cadangan', '📋 Semua Cadangan'), ('export', '📥 Export Negeri'),
-                    ('admin', '⚙️ Admin'), ('keluar', '🚪 Log Keluar')]
+                    ('selsp', '🛠️ Selenggara Sekolah & Pusat'), ('tahun', '📆 Selenggara Tahun & Data'), ('landing', '🏠 Selenggara Landing Page'), ('admin', '⚙️ Admin'), ('keluar', '🚪 Log Keluar')]
     shell_header_jpn()
-    menu, fly_cur, col_main = shell_layout("jpn_menu_sel", MENU_JPN, FLY_JPN, None, "fly_jpn")
+    import selenggara_tahun as _sth
+    FLY_JPN_X = dict(FLY_JPN)
+    FLY_JPN_X["tahun"] = _sth.FLY_TAHUN
+    import selenggara_sp as _ssp
+    FLY_JPN_X["selsp"] = _ssp.FLY_SP
+    menu, fly_cur, col_main = shell_layout("jpn_menu_sel", MENU_JPN, FLY_JPN_X, None, "fly_jpn")
 
     with col_main:
         if menu == "keluar":
             st.session_state.clear()
             st.rerun()
 
+        elif menu == "selsp":
+            _ssp.render_selenggara_sp(fly_cur)
+
+        elif menu == "tahun":
+            _sth.render_selenggara_tahun(fly_cur)
+
+        elif menu == "landing":
+            import landing_page
+            landing_page.render_admin_landing()
+
         elif menu == "dashboard":
-            st.header("Dashboard JPN Selangor - Pelantikan SPM 2026")
+            st.header(f"Dashboard JPN Selangor - Pelantikan SPM {tahun_semasa()}")
             if fly_cur == "ringkasan":
                 cols = st.columns(5)
                 for idx, t in enumerate(["sekolah_master", "pusat_master", "guru_master", "cadangan_sup"]):
@@ -42,6 +59,9 @@ def render_jpn():
                         rows.append({"PPD": ppd, "Sekolah": 0, "Guru": 0, "Cadangan": 0})
                 st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
         elif menu == "jpn_template_surat":
+            surat_aset_panel()
+            lampiran_panel_jpn()
+            surat_diagnostik("JPN")
             st.header("📄 Template Surat JPN - 11 Jawatan (LAJU)")
             st.caption("JPN selaraskan - PPD auto guna template ini")
 
@@ -63,6 +83,7 @@ def render_jpn():
                 templates = get_jpn_templates_one()
                 pilih = st.selectbox("Pilih Jawatan", JAWATAN_11, key="pilih_11_fix")
                 curr = templates.get(pilih.upper()) or DEFAULT_11.get(pilih, "<div>Template {{NAMA}} - {{PUSAT}} - {{NO_SURAT}}</div>")
+                curr = curr.replace("2026", "{{TAHUN}}")  # tahun ikut Selenggara Tahun
                 edited = st.text_area(f"Template {pilih}", value=curr, height=280, key=f"edit_{pilih}_fix")
                 c1,c2 = st.columns(2)
                 with c1:
@@ -83,7 +104,7 @@ def render_jpn():
                         st.cache_data.clear()
                         st.rerun()
                 # ===== V37: Panduan placeholder, preview sebenar & ujian PDF =====
-                st.caption("Placeholder boleh guna (huruf besar/kecil sama): {{NAMA}} {{IC}} {{JAWATAN}} {{SEKOLAH_ASAL}} {{NAMA_SEKOLAH_ASAL}} {{SEKOLAH_ASAL_PENUH}} {{PUSAT}} {{NAMA_PUSAT}} {{PUSAT_PENUH}} {{BILIK_KEBAL}} {{NO_SURAT}} {{PPD}} {{PPD_NAME}} {{TARIKH}}")
+                st.caption("Placeholder boleh guna (huruf besar/kecil sama): {{NAMA}} {{IC}} {{JAWATAN}} {{SEKOLAH_ASAL}} {{NAMA_SEKOLAH_ASAL}} {{SEKOLAH_ASAL_PENUH}} {{PUSAT}} {{NAMA_PUSAT}} {{PUSAT_PENUH}} {{BILIK_KEBAL}} {{NO_SURAT}} {{PPD}} {{PPD_NAME}} {{TARIKH}} {{TAHUN}}")
                 if enjin_pdf_templat_ada():
                     st.success("✅ Enjin PDF templat aktif - butang PDF / ZIP / kolektif PPD akan ikut templat ini.")
                 else:
@@ -141,7 +162,6 @@ def render_jpn():
                             ok = 0
                             try:
                                 supa.table("sekolah_master").delete().gt("id", 0).execute()
-                                st.write("Old sekolah_master cleared")
                             except: pass
                             BATCH = 200
                             for start in range(0, len(df_up), BATCH):
@@ -200,7 +220,7 @@ def render_jpn():
                         st.error(f"Error generate: {e}")
 
         elif menu == "pusat":
-            st.header("Pusat Master - Selangor 2026 (506 Pusat) - FIX Jumlah Calon")
+            st.header(f"Pusat Master - Selangor {tahun_semasa()} (506 Pusat) - FIX Jumlah Calon")
             try:
                 total = safe_count("pusat_master")
                 res = supa.table("pusat_master").select("*").limit(1000).execute()
@@ -494,6 +514,7 @@ ALTER TABLE pusat_master ADD COLUMN IF NOT EXISTS nama_pusat TEXT;
 
 
         elif menu == "jana_surat":
+            surat_panel("JPN")
             st.markdown(f"""
             <div style="background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%); padding:20px; border-radius:12px; color:white; margin-bottom:20px;">
                 <h2 style="margin:0; color:white;">📄 Janaan Surat Lantikan - PPD {kod_ppd} - {PPD_MAP.get(kod_ppd,'')}</h2>

@@ -147,7 +147,7 @@ def render_sup():
                             j = str(r.get(col_jawatan_sup, "")).strip()
                             if j and j not in jawatan_sup_list:
                                 jawatan_sup_list.append(j)
-                    order_j = ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik", "Penyelia Kanan Sains", "Penyelia Mata Pelajaran", "Pembantu Makmal"]
+                    order_j = ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik", "Penyelia Kanan Sains", "Penyelia Mata Pelajaran Biologi", "Penyelia Mata Pelajaran Kimia", "Penyelia Mata Pelajaran Fizik", "Penyelia Mata Pelajaran Sains Tambahan", "Pembantu Makmal"]
                     jawatan_sup_sorted = sorted(jawatan_sup_list, key=lambda x: (order_j.index(x) if x in order_j else 99, x))
 
                     if "filter_jawatan_sup_senarai" not in st.session_state:
@@ -157,7 +157,7 @@ def render_sup():
                     with col_f1_sup:
                         safe_default_sup = [x for x in st.session_state["filter_jawatan_sup_senarai"] if x in jawatan_sup_sorted]
                         if not jawatan_sup_sorted:
-                            jawatan_sup_sorted = ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik", "Penyelia Kanan Sains", "Penyelia Mata Pelajaran", "Pembantu Makmal"]
+                            jawatan_sup_sorted = ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik", "Penyelia Kanan Sains", "Penyelia Mata Pelajaran Biologi", "Penyelia Mata Pelajaran Kimia", "Penyelia Mata Pelajaran Fizik", "Penyelia Mata Pelajaran Sains Tambahan", "Pembantu Makmal"]
                             safe_default_sup = st.session_state["filter_jawatan_sup_senarai"]
                         if st.session_state["filter_jawatan_sup_senarai"] and not safe_default_sup:
                             for v in st.session_state["filter_jawatan_sup_senarai"]:
@@ -228,7 +228,7 @@ def render_sup():
                                 with c2:
                                     e_tel = st.text_input("TELEFON GURU", value=guru_edit.get("TELEFON_GURU", "") or guru_edit.get("TELEFON", ""))
                                     e_email = st.text_input("EMAIL GURU", value=guru_edit.get("EMAIL_GURU", ""))
-                                    e_jawatan = st.selectbox("JAWATAN CADANGAN", ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik", "Penyelia Kanan Sains", "Penyelia Mata Pelajaran", "Pembantu Makmal"], index=0)
+                                    e_jawatan = st.selectbox("JAWATAN CADANGAN", ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik", "Penyelia Kanan Sains", "Penyelia Mata Pelajaran Biologi", "Penyelia Mata Pelajaran Kimia", "Penyelia Mata Pelajaran Fizik", "Penyelia Mata Pelajaran Sains Tambahan", "Pembantu Makmal"], index=0)
                                     e_pengalaman = st.text_input("PENGALAMAN SPM", value=guru_edit.get("PENGALAMAN_SPM", ""))
                                     e_no_pusat = st.text_input("NO PUSAT ASAL", value=guru_edit.get("NO_PUSAT_ASAL", ""))
 
@@ -262,7 +262,7 @@ def render_sup():
                 with col2:
                     tel = st.text_input("NO TELEFON GURU * (Wajib)")
                     email = st.text_input("EMAIL GURU")
-                    jaw = st.selectbox("JAWATAN CADANGAN (Betul)", ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik", "Penyelia Kanan Sains", "Penyelia Mata Pelajaran", "Pembantu Makmal"])
+                    jaw = st.selectbox("JAWATAN CADANGAN (Betul)", ["Ketua Pengawas", "Timbalan Ketua Pengawas", "Penyelia Kawasan", "Pengawas Peperiksaan", "Juru Tulis", "Juru Baca", "Ketua Pengawas Hospital", "Pengawas Hospital", "Pengawas Pengiring", "Pengemas Bilik", "Penyelia Kanan Sains", "Penyelia Mata Pelajaran Biologi", "Penyelia Mata Pelajaran Kimia", "Penyelia Mata Pelajaran Fizik", "Penyelia Mata Pelajaran Sains Tambahan", "Pembantu Makmal"])
                     pengalaman = st.text_input("PENGALAMAN SPM (Tahun) - SUP isi", placeholder="Contoh: 3 tahun")
                     no_pusat_asal = st.text_input("NO PUSAT ASAL", placeholder="Contoh: BA142")
 
@@ -416,7 +416,10 @@ def render_sup():
             "Pengawas Pengiring",
             "Pengemas Bilik",
             "Penyelia Kanan Sains (Amali Sains - guru sekolah asal)",
-            "Penyelia Mata Pelajaran (Amali Sains - guru sekolah asal)",
+            "Penyelia Mata Pelajaran Biologi (Amali Sains - guru sekolah asal)",
+            "Penyelia Mata Pelajaran Kimia (Amali Sains - guru sekolah asal)",
+            "Penyelia Mata Pelajaran Fizik (Amali Sains - guru sekolah asal)",
+            "Penyelia Mata Pelajaran Sains Tambahan (Amali Sains - guru sekolah asal)",
             "Pembantu Makmal (Amali Sains - guru sekolah asal)"
         ]
                 if fly_cur == "pilih":

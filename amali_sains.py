@@ -7,7 +7,7 @@
      - Timbalan KP     -> surat "Timbalan Ketua Pengawas Amali Sains"
      - Penyelia Kawasan (orang & bilik kebal sama) -> surat "Penyelia Kawasan Amali Sains"
    Surat tambahan ini disimpan pada rekod petugas yang sama (data.AMALI_NO / AMALI_JAWATAN / AMALI_STATUS) - TIADA rekod pendua.
- * Jawatan baharu (guru sekolah asal, dicadangkan SUP): Penyelia Kanan Sains (PKS), Penyelia Mata Pelajaran (PMP), Pembantu Makmal (PM).
+ * Jawatan baharu (guru sekolah asal, dicadangkan SUP): Penyelia Kanan Sains (PKS), Penyelia Mata Pelajaran (PMP: Biologi, Kimia, Fizik, Sains Tambahan), Pembantu Makmal (PM).
    Ditempatkan di pusat Amali, melalui aliran biasa (Hasil -> Semakan -> Kelulusan) dan Janaan Surat Amali.
  * No surat Amali dalam siri berasingan daripada SPM (no rujukan fail lain; jilid 100 surat seperti biasa).
 """
@@ -28,11 +28,16 @@ AMALI_KP = "Ketua Pengawas Amali Sains"
 AMALI_TKP = "Timbalan Ketua Pengawas Amali Sains"
 AMALI_PK = "Penyelia Kawasan Amali Sains"
 J_PKS = "Penyelia Kanan Sains"
-J_PMP = "Penyelia Mata Pelajaran"
+J_PMP = "Penyelia Mata Pelajaran"      # lama / tanpa mata pelajaran (kekal untuk keserasian)
+J_PMP_BIO = "Penyelia Mata Pelajaran Biologi"
+J_PMP_KIM = "Penyelia Mata Pelajaran Kimia"
+J_PMP_FIZ = "Penyelia Mata Pelajaran Fizik"
+J_PMP_ST = "Penyelia Mata Pelajaran Sains Tambahan"
+PMP_LIST = [J_PMP_BIO, J_PMP_KIM, J_PMP_FIZ, J_PMP_ST]
 J_PM = "Pembantu Makmal"
-JAWATAN_BARU = [J_PKS, J_PMP, J_PM]
+JAWATAN_BARU = [J_PKS] + PMP_LIST + [J_PM]
 JAWATAN_LEDGER = [AMALI_KP, AMALI_TKP, AMALI_PK]
-JAWATAN_AMALI = JAWATAN_LEDGER + JAWATAN_BARU
+JAWATAN_AMALI = JAWATAN_LEDGER + JAWATAN_BARU + [J_PMP]
 RUJ_AMALI_LALAI = "JPNS.SPP 600-7/1/2"
 
 _KUNCI_BARU = ("PENYELIA KANAN SAINS", "PENYELIA MATA PELAJARAN", "PEMBANTU MAKMAL")
@@ -57,6 +62,10 @@ def default_template(jawatan):
              "PENYELIA KAWASAN AMALI SAINS": "PENYELIA KAWASAN UJIAN AMALI SAINS",
              "PENYELIA KANAN SAINS": "PENYELIA KANAN SAINS (PKS) UJIAN AMALI SAINS",
              "PENYELIA MATA PELAJARAN": "PENYELIA MATA PELAJARAN (PMP) UJIAN AMALI SAINS",
+             "PENYELIA MATA PELAJARAN BIOLOGI": "PENYELIA MATA PELAJARAN (PMP) BIOLOGI UJIAN AMALI SAINS",
+             "PENYELIA MATA PELAJARAN KIMIA": "PENYELIA MATA PELAJARAN (PMP) KIMIA UJIAN AMALI SAINS",
+             "PENYELIA MATA PELAJARAN FIZIK": "PENYELIA MATA PELAJARAN (PMP) FIZIK UJIAN AMALI SAINS",
+             "PENYELIA MATA PELAJARAN SAINS TAMBAHAN": "PENYELIA MATA PELAJARAN (PMP) SAINS TAMBAHAN UJIAN AMALI SAINS",
              "PEMBANTU MAKMAL": "PEMBANTU MAKMAL UJIAN AMALI SAINS"}.get(j, j + " UJIAN AMALI SAINS")
     return ("<div style='font-family:Arial; padding:25px; border:1px solid #000;'><table style='width:100%; border:none;'><tr>"
             "<td style='width:80px; vertical-align:top; border:none;'><img src='https://upload.wikimedia.org/wikipedia/commons/2/2a/Coat_of_arms_of_Malaysia.svg' style='width:70px;'></td>"
@@ -215,6 +224,17 @@ def _jenis(jaw):
     return ""
 
 
+def _pmp_kanon(jaw):
+    """Nama kanonik PMP ikut mata pelajaran (Biologi/Kimia/Fizik/Sains Tambahan)."""
+    j = " ".join(str(jaw or "").upper().split())
+    if "TAMBAHAN" in j:
+        return J_PMP_ST
+    for k, n in (("BIOLOGI", J_PMP_BIO), ("KIMIA", J_PMP_KIM), ("FIZIK", J_PMP_FIZ)):
+        if k in j:
+            return n
+    return J_PMP
+
+
 _JAW_AMALI = {"KP": AMALI_KP, "TKP": AMALI_TKP, "PK": AMALI_PK, "PKS": J_PKS, "PMP": J_PMP, "PM": J_PM}
 
 
@@ -268,7 +288,7 @@ def muat_semua(kod_ppd, ams=None):
         # layak Amali: KP/TKP di pusat Amali; PK yang menjaga sekurang-kurangnya satu pusat Amali; PKS/PMP/PM yang ditempatkan di pusat Amali
         layak = bool(pusat) and ((pusat in ams) if jn in ("KP", "TKP", "PKS", "PMP", "PM") else bool(pusat_kira))
         rows.append({"id": al._pyid(r0.get("id")), "nama": al._g(r, d, "NAMA_GURU", "nama_guru"), "ic": al._g(r, d, "IC_GURU", "ic_guru"),
-                     "jn": jn, "jaw_spm": jaw, "jaw": _JAW_AMALI[jn],
+                     "jn": jn, "jaw_spm": jaw, "jaw": (_pmp_kanon(jaw) if jn == "PMP" else _JAW_AMALI[jn]),
                      "sek": al._g(r, d, "KOD_SEKOLAH_ASAL", "kod_sekolah_asal", "KOD_SEKOLAH", "kod_sekolah").upper(),
                      "nama_sek": al._g(r, d, "NAMA_SEKOLAH_ASAL", "nama_sekolah_asal"), "tel": al._g(r, d, "TELEFON_GURU", "telefon_guru"),
                      "pusat": pusat, "layak": layak, "spm_rank": spm_rank, "status": status, "stage": stg if (layak or stg >= 0) else -1,
@@ -363,7 +383,7 @@ def render_penempatan(kod_ppd):
     st.caption("PKS, PMP dan PM ialah guru sekolah asal yang dicadangkan SUP. KP, TKP dan Penyelia Kawasan Amali ialah petugas SPM sedia ada di pusat Amali - tidak perlu ditempatkan di sini.")
     pusat = st.selectbox("Pusat Amali Sains", sorted(ams), format_func=lambda p: f"{p} - {info[p]['nama'][:35]}", key="am_pl_pusat")
     jaw = st.radio("Jawatan", JAWATAN_BARU, horizontal=True, key="am_pl_jaw")
-    cols = st.columns(3)
+    cols = st.columns(len(JAWATAN_BARU))
     for c, jn in zip(cols, JAWATAN_BARU):
         c.metric(f"{jn} di {pusat}", sum(1 for r in rows if r["pusat"] == pusat and r["jaw"] == jn))
     ada = [r for r in rows if r["pusat"] == pusat and r["jaw"] == jaw]

@@ -316,6 +316,12 @@ def get_jpn_template_for_jawatan(jawatan_str):
                 return _am.default_template(jw)
         except Exception:
             pass
+        try:
+            import ujian_mendengar as _um
+            if _um.is_um_jaw(jw):         # jawatan Ujian Mendengar: tepat atau templat lalai (tidak jatuh ke templat SPM)
+                return _um.default_template(jw)
+        except Exception:
+            pass
         # padanan separa: pilih nama jawatan paling panjang yang sepadan (elak "PENGAWAS" tersalah ambil "KETUA PENGAWAS")
         cands = [k for k in norm if k in jw or jw in k]
         if cands:
@@ -1541,6 +1547,14 @@ def get_cadangan_df(kod_ppd=None, kod_sekolah=None):
             for col in ['id_num', 'status_prio']:
                 if col in df_norm.columns:
                     df_norm = df_norm.drop(columns=[col])
+
+        # PKS / PMP / PM (Amali Sains) diurus terus dalam menu Lantikan Petugas Amali - tidak masuk Cadangan PPD / SPM
+        if kod_ppd and not kod_sekolah and 'JAWATAN_CADANGAN' in df_norm.columns:
+            try:
+                import amali_sains as _am_f
+                df_norm = df_norm[~df_norm['JAWATAN_CADANGAN'].apply(_am_f.is_amali_jaw)].copy()
+            except Exception:
+                pass
 
         # Filter by PPD if requested - STRICT FILTER (FIX untuk isu Sepang nampak Klang)
         if kod_ppd:

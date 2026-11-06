@@ -89,3 +89,43 @@ def ruj_terkini(df, amali=False):
         if r and parse_no(no, r):
             return r
     return RUJ_AMALI_LALAI if amali else RUJ_LALAI
+
+
+# ---------------- Siri No Surat UJIAN MENDENGAR (berasingan daripada SPM dan Amali) ----------------
+RUJ_UM_LALAI = "JPNS.SPP 600-7/1/3"
+
+
+def _senarai_um(df):
+    out = []
+    if df is None or getattr(df, "empty", True):
+        return out
+    for _, r in df.iterrows():
+        d = r.get("data")
+        if isinstance(d, str):
+            try:
+                d = json.loads(d)
+            except Exception:
+                d = {}
+        if not isinstance(d, dict):
+            d = {}
+        v = d.get("UM_NO")
+        if v and str(v).strip() not in ("", "None", "nan"):
+            out.append(str(v).strip())
+    return out
+
+
+def max_no_um(df, ruj):
+    mx = 0
+    for no in _senarai_um(df):
+        n = parse_no(no, ruj)
+        if n:
+            mx = max(mx, n)
+    return mx
+
+
+def ruj_terkini_um(df):
+    for no in reversed(_senarai_um(df)):
+        r = ruj_dari_no(no)
+        if r and parse_no(no, r):
+            return r
+    return RUJ_UM_LALAI

@@ -36,7 +36,7 @@ def render_sup():
         st.session_state.sup_dash_sub = "utama"
     shell_header_sup(kod, info, no_pusat_list_sidebar)
     FLY_SUP_X = dict(FLY_SUP)
-    FLY_SUP_X['surat'] = [('jadual', '📑 SPM - Jadual Jawatan'), ('individu', '📄 SPM - Surat Individu'), ('amali', '🔬 Amali Sains')]
+    FLY_SUP_X['surat'] = [('jadual', '📑 SPM - Jadual Jawatan'), ('individu', '📄 SPM - Surat Individu'), ('amali', '🔬 Amali Sains'), ('um', '🎧 Ujian Mendengar')]
     menu, fly_cur, col_main = shell_layout("sup_menu_sel", MENU_SUP, FLY_SUP_X, "sup_dash_sub", "fly_sup")
 
     with col_main:
@@ -841,6 +841,12 @@ def render_sup():
                                 st.dataframe(df_display_petugas, use_container_width=True, hide_index=True)
                                 st.download_button(f"📥 Export Petugas Luar {pilih_pusat_sup}", to_excel(df_display_petugas), file_name=f"petugas_LUAR_{pilih_pusat_sup}_{kod}.xlsx", use_container_width=True)
                     # ===== END FIX PETUGAS =====
+
+        elif menu == "surat" and fly_cur == "um":
+            import ujian_mendengar as _um_sup
+            surat_panel("SUP", kod_ppd=str(info.get("kod_ppd", "")).upper(), kod_sekolah=kod)
+            st.header(f"🎧 Surat Lantikan Ujian Mendengar - {kod} - {info.get('nama_sekolah','')}")
+            _um_sup.render_surat_sup(kod, str(info.get("kod_ppd", "")).upper(), get_cadangan_df(kod_sekolah=kod))
 
         elif menu == "surat" and fly_cur == "amali":
             import amali_sains as _amali

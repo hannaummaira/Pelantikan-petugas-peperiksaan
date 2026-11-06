@@ -90,7 +90,7 @@ def render_ppd():
                     ('selenggara', '🔐 Selenggara Bilik Kebal'), ('penyelia', '🔐 Lantik Penyelia Kawasan'), ('cadangan', '📋 Cadangan SUP'), ('jana', '🚀 Jana Keseluruhan'),
                     ('manual', '📌 Penempatan Manual'), ('zon', '🗺️ Penempatan Zon'), ('hasil', '📋 Hasil Janaan'),
                     ('semakan', '🔍 Semakan Lantikan'), ('kelulusan', '✅ Kelulusan'), ('jana_surat', '📄 Janaan Surat Lantikan'),
-                    ('sah', '🏅 Sah Lantik'), ('amali', '🔬 Lantikan Petugas Amali'), ('batal', '🗑️ Batal Semua'), ('export', '📥 Export'), ('keluar', '🚪 Log Keluar')]
+                    ('sah', '🏅 Sah Lantik'), ('amali', '🔬 Lantikan Petugas Amali'), ('um', '🎧 Lantikan Petugas Ujian Mendengar'), ('batal', '🗑️ Batal Semua'), ('export', '📥 Export'), ('keluar', '🚪 Log Keluar')]
     # Sub menu: "Status Pusat" (dashboard) dipindah ke Pusat di PPD dan dinamakan "Selenggara Pusat"
     FLY_PPD_X = dict(FLY_PPD)
     FLY_PPD_X['dashboard'] = [x for x in FLY_PPD.get('dashboard', []) if x[0] not in ('status', 'berwarna')]
@@ -109,6 +109,8 @@ def render_ppd():
     FLY_PPD_X['sah'] = [('hantar', '📤 Hantar ke Sekolah'), ('muat', '📥 Muat Turun'), ('senarai', '👥 Senarai Disahkan'), ('pk', '🔐 Penyelia Kawasan (Bilik Kebal)')]
     import amali_sains as _amali
     FLY_PPD_X['amali'] = _amali.FLY_AMALI
+    import ujian_mendengar as _um
+    FLY_PPD_X['um'] = _um.FLY_UM
     shell_header_ppd(kod_ppd)
     menu, fly_cur, col_main = shell_layout("ppd_menu_sel", MENU_PPD, FLY_PPD_X, None, "fly_ppd")
 
@@ -2612,6 +2614,9 @@ def render_ppd():
 
         elif menu == "amali":
             _amali.render_menu(kod_ppd, fly_cur)
+
+        elif menu == "um":
+            _um.render_menu(kod_ppd, fly_cur)
 
         elif menu == "jana_surat":
             surat_panel("PPD", kod_ppd=kod_ppd)

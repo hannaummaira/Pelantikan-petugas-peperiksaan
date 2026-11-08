@@ -8,8 +8,7 @@ import streamlit as st
 
 import spm_core as core
 import ppd_aliran as al
-import ui_theme as ui
-from kemajuan import muat_rekod, _spm
+from kemajuan import muat_rekod, _spm, ui
 
 
 def _ic_bersih(x):

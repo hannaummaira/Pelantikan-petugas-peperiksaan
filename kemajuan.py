@@ -11,8 +11,65 @@ import spm_core as core
 import ppd_aliran as al
 import amali_sains as am
 import ujian_mendengar as um
-import ui_theme as ui
 from kuota_pusat import _data as _kdata
+
+import html as _html
+
+_KMJ_CSS = """/* komponen kemajuan */
+.kmj-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:6px 0 14px}
+.kmj-tile {background:#fff;border:1px solid #c9daee;border-radius:14px;padding:12px 14px;box-shadow:0 3px 10px rgba(13,71,161,.07);position:relative;overflow:hidden}
+.kmj-tile:before {content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:#1e88e5}
+.kmj-tile.ok:before {background:#2e9d57} .kmj-tile.warn:before {background:#f59e0b} .kmj-tile.bad:before {background:#d32f2f}
+.kmj-tile .l {font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#46556d}
+.kmj-tile .n {font-size:26px;font-weight:800;color:#0a2a66;line-height:1.1;margin-top:4px}
+.kmj-tile .s {font-size:11px;color:#46556d;margin-top:3px;font-weight:500}
+.kmj-sec {display:flex;align-items:center;gap:10px;margin:18px 0 8px;font-size:15px;font-weight:800;color:#0a2a66}
+.kmj-sec:after {content:"";flex:1;height:2px;background:linear-gradient(90deg,#90caf9,transparent)}
+.kmj-bar {margin:7px 0}
+.kmj-bar .h {display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#0b1b33;margin-bottom:3px}
+.kmj-bar .h span:last-child {color:#46556d;font-weight:600}
+.kmj-bar .t {height:11px;background:#dbe7f6;border-radius:999px;overflow:hidden}
+.kmj-bar .f {height:100%;border-radius:999px;background:linear-gradient(90deg,#1565c0,#42a5f5);transition:width .4s ease}
+.kmj-bar.ok .f {background:linear-gradient(90deg,#2e9d57,#6fd39a)} .kmj-bar.warn .f {background:linear-gradient(90deg,#e08a00,#fbbf24)} .kmj-bar.bad .f {background:linear-gradient(90deg,#c62828,#ef6c6c)}
+.kmj-pill {display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px;border:1px solid #90caf9;background:#e8f1fd;color:#0a2a66}
+.kmj-pill.ok {background:#dcfce7;border-color:#bbf7d0;color:#166534} .kmj-pill.warn {background:#fef3c7;border-color:#fde68a;color:#92400e} .kmj-pill.bad {background:#fee2e2;border-color:#fecaca;color:#991b1b}
+@media (max-width:900px) {.block-container {padding-left:.6rem!important;padding-right:.6rem!important} .kmj-grid {grid-template-columns:repeat(2,1fr)}}"""
+
+
+def _esc(x):
+    return _html.escape(str(x if x is not None else ""))
+
+
+def _css():
+    try:
+        st.markdown("<style>" + _KMJ_CSS + "</style>", unsafe_allow_html=True)
+    except Exception:
+        pass
+
+
+class _UI:
+    """Pembantu paparan kemajuan - terkandung dalam modul ini supaya tidak bergantung pada versi ui_theme."""
+    @staticmethod
+    def kmj_grid(tiles):
+        _css()
+        h = "".join(f'<div class="kmj-tile {_esc(t[3] if len(t) > 3 else "")}"><div class="l">{_esc(t[0])}</div><div class="n">{_esc(t[1])}</div><div class="s">{_esc(t[2] if len(t) > 2 else "")}</div></div>' for t in tiles)
+        st.markdown('<div class="kmj-grid">' + h + '</div>', unsafe_allow_html=True)
+
+    @staticmethod
+    def kmj_sec(teks):
+        _css()
+        st.markdown(f'<div class="kmj-sec">{_esc(teks)}</div>', unsafe_allow_html=True)
+
+    @staticmethod
+    def kmj_bar(label, nilai, jumlah, tone=""):
+        _css()
+        pct = 0 if not jumlah else max(0, min(100, round(100 * nilai / jumlah)))
+        if not tone:
+            tone = "ok" if pct >= 100 else ("warn" if pct >= 50 else ("bad" if jumlah and pct < 25 else ""))
+        st.markdown(f'<div class="kmj-bar {_esc(tone)}"><div class="h"><span>{_esc(label)}</span><span>{_esc(nilai)} / {_esc(jumlah)} &nbsp;·&nbsp; {pct}%</span></div><div class="t"><div class="f" style="width:{pct}%"></div></div></div>', unsafe_allow_html=True)
+
+
+ui = _UI
 
 KOD_DAERAH = list(getattr(core, "KOD_DAERAH", ["BA", "BB", "BC", "BD", "BE", "BF", "BG", "BH", "BJ", "BK"]))
 

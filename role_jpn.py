@@ -8,7 +8,7 @@ globals().update({k: v for k, v in vars(_ui).items() if not k.startswith("__")})
 from surat_tools import surat_panel, surat_aset_panel, surat_diagnostik, lampiran_panel_jpn
 
 def render_jpn():
-    MENU_JPN = [('dashboard', '📊 Dashboard JPN'), ('jpn_template_surat', '📄 Template Surat JPN (11 Jawatan)'), ('sekolah', '🏫 Semua Sekolah'), ('pusat', '🏫 Pusat Master'),
+    MENU_JPN = [('dashboard', '📊 Dashboard JPN'), ('kemajuan', '📈 Kemajuan Negeri'), ('carian', '🔎 Carian & Semakan Data'), ('sandaran', '💾 Sandaran Data'), ('jpn_template_surat', '📄 Template Surat JPN (11 Jawatan)'), ('sekolah', '🏫 Semua Sekolah'), ('pusat', '🏫 Pusat Master'),
                     ('guru', '👨\u200d🏫 Guru Master'), ('cadangan', '📋 Semua Cadangan'), ('export', '📥 Export Negeri'),
                     ('selsp', '🛠️ Selenggara Sekolah & Pusat'), ('tahun', '📆 Selenggara Tahun & Data'), ('landing', '🏠 Selenggara Landing Page'), ('admin', '⚙️ Admin'), ('keluar', '🚪 Log Keluar')]
     shell_header_jpn()
@@ -17,6 +17,7 @@ def render_jpn():
     FLY_JPN_X["tahun"] = _sth.FLY_TAHUN
     import selenggara_sp as _ssp
     FLY_JPN_X["selsp"] = _ssp.FLY_SP
+    FLY_JPN_X["carian"] = [('carian', '🔎 Carian Petugas'), ('semakan', '🧪 Semakan Data')]
     menu, fly_cur, col_main = shell_layout("jpn_menu_sel", MENU_JPN, FLY_JPN_X, None, "fly_jpn")
 
     with col_main:
@@ -26,6 +27,21 @@ def render_jpn():
 
         elif menu == "selsp":
             _ssp.render_selenggara_sp(fly_cur)
+
+        elif menu == "kemajuan":
+            import kemajuan as _kmj
+            _kmj.render_jpn()
+
+        elif menu == "carian":
+            import carian_semakan as _cs
+            if fly_cur == "semakan":
+                _cs.render_semakan(None)
+            else:
+                _cs.render_carian(None)
+
+        elif menu == "sandaran":
+            import sandaran as _sd
+            _sd.render_sandaran()
 
         elif menu == "tahun":
             _sth.render_selenggara_tahun(fly_cur)

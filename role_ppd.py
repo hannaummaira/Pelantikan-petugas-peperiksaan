@@ -86,7 +86,7 @@ def render_ppd():
     MAXS = max_per_sekolah(kod_ppd)  # maksimum guru satu sekolah asal bertugas di satu pusat (tetapan PPD)
     if SCOPE["ppd"] and kod_ppd != SCOPE["ppd"]:
         st.session_state.clear(); st.rerun()
-    MENU_PPD = [('dashboard', '📊 Dashboard PPD'), ('sekolah', '🏫 Sekolah dalam PPD'), ('pusat', '🏫 Pusat di PPD'),
+    MENU_PPD = [('dashboard', '📊 Dashboard PPD'), ('kemajuan', '📈 Papan Kemajuan'), ('carian', '🔎 Carian & Semakan Data'), ('sekolah', '🏫 Sekolah dalam PPD'), ('pusat', '🏫 Pusat di PPD'),
                     ('selenggara', '🔐 Selenggara Bilik Kebal'), ('penyelia', '🔐 Lantik Penyelia Kawasan'), ('cadangan', '📋 Cadangan SUP'), ('jana', '🚀 Jana Keseluruhan'),
                     ('manual', '📌 Penempatan Manual'), ('zon', '🗺️ Penempatan Zon'), ('hasil', '📋 Hasil Janaan'),
                     ('semakan', '🔍 Semakan Lantikan'), ('kelulusan', '✅ Kelulusan'), ('jana_surat', '📄 Janaan Surat Lantikan'),
@@ -111,6 +111,7 @@ def render_ppd():
     FLY_PPD_X['amali'] = _amali.FLY_AMALI
     import ujian_mendengar as _um
     FLY_PPD_X['um'] = _um.FLY_UM
+    FLY_PPD_X['carian'] = [('carian', '🔎 Carian Petugas'), ('semakan', '🧪 Semakan Data')]
     shell_header_ppd(kod_ppd)
     menu, fly_cur, col_main = shell_layout("ppd_menu_sel", MENU_PPD, FLY_PPD_X, None, "fly_ppd")
 
@@ -2617,6 +2618,17 @@ def render_ppd():
 
         elif menu == "um":
             _um.render_menu(kod_ppd, fly_cur)
+
+        elif menu == "kemajuan":
+            import kemajuan as _kmj
+            _kmj.render_ppd(kod_ppd)
+
+        elif menu == "carian":
+            import carian_semakan as _cs
+            if fly_cur == "semakan":
+                _cs.render_semakan(kod_ppd)
+            else:
+                _cs.render_carian(kod_ppd)
 
         elif menu == "jana_surat":
             surat_panel("PPD", kod_ppd=kod_ppd)

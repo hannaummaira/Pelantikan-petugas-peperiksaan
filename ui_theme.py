@@ -179,10 +179,97 @@ div[style*="0d47a1"] p {color:#e3f2fd!important; -webkit-text-fill-color:#e3f2fd
 </style>
 """
 
+
+MODERN_CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+html, body, .stApp, [data-testid="stAppViewContainer"], button, input, textarea, select {font-family:'Inter','Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif!important}
+.stApp {background:linear-gradient(180deg,#dcecfb 0%,#eaf3fd 38%,#f4f9ff 100%)!important}
+footer, [data-testid="stFooter"] {visibility:hidden!important;height:0!important}
+.block-container {padding-left:1.2rem!important;padding-right:1.2rem!important}
+/* kad & pengepala */
+.sup-box {border-radius:14px!important;border:1px solid #c9daee!important;box-shadow:0 6px 18px rgba(13,71,161,.08)!important}
+.sup-banner {background:linear-gradient(100deg,#0a3a8a 0%,#0d47a1 45%,#1976d2 100%)!important;padding:13px 18px!important}
+.sup-banner .t {font-size:14px!important;letter-spacing:.02em!important}
+.sup-pill {background:rgba(255,255,255,.18)!important;border:1px solid rgba(255,255,255,.35)!important}
+.sup-info {background:#f7fbff!important}
+.sup-note {border-radius:12px!important;box-shadow:0 2px 8px rgba(13,71,161,.06)}
+.sup-sub-h {border-radius:10px 10px 0 0!important;background:linear-gradient(100deg,#0a3a8a,#1565c0)!important}
+.st-key-shellsub {border-radius:0 0 10px 10px!important;overflow:hidden}
+.st-key-shellmenu [class*="st-key-flymenu_"] button {border-radius:0 10px 10px 0!important;transition:background .15s ease,box-shadow .15s ease,padding-left .15s ease!important}
+.st-key-shellmenu [class*="st-key-flymenu_"] button:hover {padding-left:16px!important}
+.st-key-shellmenu [class*="st-key-flymenu_"] button[kind="primary"],
+.st-key-shellmenu [class*="st-key-flymenu_"] [data-testid="stBaseButton-primary"] {background:linear-gradient(100deg,#0a2a66,#1258b8)!important}
+/* tajuk */
+h1, h2, h3 {color:#0a2a66!important;letter-spacing:-.01em!important;font-weight:800!important}
+h2 {border-bottom:3px solid #90caf9;padding-bottom:6px!important;margin-bottom:12px!important}
+/* metrik */
+[data-testid="stMetric"] {border-radius:12px!important;border:1px solid #c9daee!important;border-left:5px solid #1e88e5!important;box-shadow:0 3px 10px rgba(13,71,161,.07);transition:transform .15s ease,box-shadow .15s ease}
+[data-testid="stMetric"]:hover {transform:translateY(-1px);box-shadow:0 6px 16px rgba(13,71,161,.12)}
+/* butang */
+.stButton > button, .stDownloadButton > button, [data-testid="stFormSubmitButton"] > button {border-radius:10px!important;transition:filter .15s ease,transform .1s ease,box-shadow .15s ease!important;box-shadow:0 2px 6px rgba(13,71,161,.18)!important}
+.stButton > button:hover, .stDownloadButton > button:hover {filter:brightness(1.12);box-shadow:0 5px 12px rgba(13,71,161,.28)!important}
+.stButton > button:active, .stDownloadButton > button:active {transform:translateY(1px)}
+.stButton > button:disabled, .stDownloadButton > button:disabled {filter:grayscale(.6) opacity(.6)}
+/* tab */
+[data-baseweb="tab-list"] {gap:4px;border-bottom:2px solid #c9daee}
+[data-baseweb="tab"] {border-radius:10px 10px 0 0!important;padding:8px 16px!important}
+[data-baseweb="tab"][aria-selected="true"] {background:#ffffff!important;box-shadow:0 -2px 8px rgba(13,71,161,.08)}
+[data-baseweb="tab-highlight"] {background:#0d47a1!important;height:3px!important}
+/* jadual / pengembang / amaran / input */
+[data-testid="stDataFrame"], [data-testid="stDataEditor"] {border-radius:12px;overflow:hidden;border:1px solid #c9daee;box-shadow:0 3px 10px rgba(13,71,161,.06)}
+[data-testid="stExpander"] {background:#ffffff;border:1px solid #c9daee!important;border-radius:12px!important;box-shadow:0 2px 8px rgba(13,71,161,.05)}
+[data-testid="stAlert"] {border-radius:12px!important}
+[data-baseweb="select"] > div, [data-baseweb="input"], textarea {border-radius:10px!important}
+[data-testid="stProgress"] > div > div > div > div {background:linear-gradient(90deg,#1565c0,#42a5f5)!important}
+::-webkit-scrollbar {width:9px;height:9px} ::-webkit-scrollbar-thumb {background:#90a4c8;border-radius:8px} ::-webkit-scrollbar-track {background:#e3eefb}
+/* komponen kemajuan */
+.kmj-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:6px 0 14px}
+.kmj-tile {background:#fff;border:1px solid #c9daee;border-radius:14px;padding:12px 14px;box-shadow:0 3px 10px rgba(13,71,161,.07);position:relative;overflow:hidden}
+.kmj-tile:before {content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:#1e88e5}
+.kmj-tile.ok:before {background:#2e9d57} .kmj-tile.warn:before {background:#f59e0b} .kmj-tile.bad:before {background:#d32f2f}
+.kmj-tile .l {font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#46556d}
+.kmj-tile .n {font-size:26px;font-weight:800;color:#0a2a66;line-height:1.1;margin-top:4px}
+.kmj-tile .s {font-size:11px;color:#46556d;margin-top:3px;font-weight:500}
+.kmj-sec {display:flex;align-items:center;gap:10px;margin:18px 0 8px;font-size:15px;font-weight:800;color:#0a2a66}
+.kmj-sec:after {content:"";flex:1;height:2px;background:linear-gradient(90deg,#90caf9,transparent)}
+.kmj-bar {margin:7px 0}
+.kmj-bar .h {display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#0b1b33;margin-bottom:3px}
+.kmj-bar .h span:last-child {color:#46556d;font-weight:600}
+.kmj-bar .t {height:11px;background:#dbe7f6;border-radius:999px;overflow:hidden}
+.kmj-bar .f {height:100%;border-radius:999px;background:linear-gradient(90deg,#1565c0,#42a5f5);transition:width .4s ease}
+.kmj-bar.ok .f {background:linear-gradient(90deg,#2e9d57,#6fd39a)} .kmj-bar.warn .f {background:linear-gradient(90deg,#e08a00,#fbbf24)} .kmj-bar.bad .f {background:linear-gradient(90deg,#c62828,#ef6c6c)}
+.kmj-pill {display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px;border:1px solid #90caf9;background:#e8f1fd;color:#0a2a66}
+.kmj-pill.ok {background:#dcfce7;border-color:#bbf7d0;color:#166534} .kmj-pill.warn {background:#fef3c7;border-color:#fde68a;color:#92400e} .kmj-pill.bad {background:#fee2e2;border-color:#fecaca;color:#991b1b}
+@media (max-width:900px) {.block-container {padding-left:.6rem!important;padding-right:.6rem!important} .kmj-grid {grid-template-columns:repeat(2,1fr)}}
+</style>
+"""
+
+
+def kmj_tile(label, nilai, sub="", tone=""):
+    return f'<div class="kmj-tile {esc(tone)}"><div class="l">{esc(label)}</div><div class="n">{esc(nilai)}</div><div class="s">{esc(sub)}</div></div>'
+
+
+def kmj_grid(tiles):
+    """tiles: senarai (label, nilai, sub, tone)."""
+    st.markdown('<div class="kmj-grid">' + "".join(kmj_tile(*t) for t in tiles) + '</div>', unsafe_allow_html=True)
+
+
+def kmj_sec(teks):
+    st.markdown(f'<div class="kmj-sec">{esc(teks)}</div>', unsafe_allow_html=True)
+
+
+def kmj_bar(label, nilai, jumlah, tone=""):
+    pct = 0 if not jumlah else max(0, min(100, round(100 * nilai / jumlah)))
+    if not tone:
+        tone = "ok" if pct >= 100 else ("warn" if pct >= 50 else ("bad" if jumlah and pct < 25 else ""))
+    st.markdown(f'<div class="kmj-bar {esc(tone)}"><div class="h"><span>{esc(label)}</span><span>{esc(nilai)} / {esc(jumlah)} &nbsp;·&nbsp; {pct}%</span></div><div class="t"><div class="f" style="width:{pct}%"></div></div></div>', unsafe_allow_html=True)
+
 def apply_theme():
     st.markdown(THEME_CSS, unsafe_allow_html=True)
     st.markdown(KONTRAS_CSS, unsafe_allow_html=True)
     st.markdown(FIX_CSS, unsafe_allow_html=True)
+    st.markdown(MODERN_CSS, unsafe_allow_html=True)
 
 def _refresh_block(role):
     with kc("suprefresh"):
